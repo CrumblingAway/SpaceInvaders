@@ -18,7 +18,14 @@ public:
      */
     void Run();
 
+    /**
+     * Get the name of this application. This name is provided internally to the windowing system
+     * and the rendering API.
+     */
+    const char* GetName() const;
+
 private:
+    const char* m_pApplicationName = "Space Invaders";
 
     /**
      * Init all dependencies.

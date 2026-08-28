@@ -11,6 +11,11 @@ void SpaceInvadersGame::Run()
     Cleanup();
 }
 
+const char *SpaceInvadersGame::GetName() const
+{
+    return m_pApplicationName;
+}
+
 void SpaceInvadersGame::Init()
 {
     InitSDL();
@@ -26,7 +31,7 @@ void SpaceInvadersGame::InitSDL()
     }
 
     m_sdlWindow = SDL_CreateWindow(
-        "Space Invaders",
+        m_pApplicationName,
         m_windowWidth,
         m_windowHeight,
         SDL_WINDOW_VULKAN
