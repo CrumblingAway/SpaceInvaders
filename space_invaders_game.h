@@ -2,6 +2,8 @@
 
 #include <cstddef>
 
+#include <vulkan/vulkan.h>
+
 // Forward declarations.
 class SDL_Window;
 
@@ -62,4 +64,7 @@ private:
     const size_t m_windowHeight = 600;
     const size_t m_windowWidth = 800;
     SDL_Window* m_sdlWindow = nullptr;
+
+    VkInstance m_vkInstance;
+    VkDevice m_vkDevice;
 };

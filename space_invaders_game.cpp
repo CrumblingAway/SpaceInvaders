@@ -1,8 +1,16 @@
 #include "space_invaders_game.h"
 
 #include <iostream>
+#include <vector>
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+
+#define SDL_CRITICAL_ERROR(text) std::cerr << "SDL: " << text << ". Error " << SDL_GetError() << ".\n";\
+                        std::exit(EXIT_FAILURE);
+#define VULKAN_CRITICAL_ERROR(text, error_enum) std::cerr << "Vulkan: " << text << ". Error " <<\
+                                       error_enum << ".\n";\
+                                       std::exit(EXIT_FAILURE);
 
 void SpaceInvadersGame::Run()
 {
@@ -26,8 +34,7 @@ void SpaceInvadersGame::InitSDL()
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
-        std::cerr << "Failed to initialize SDL. Error " << SDL_GetError() << std::endl;
-        std::exit(EXIT_FAILURE);
+        SDL_CRITICAL_ERROR("Failed to initialize");
     }
 
     m_sdlWindow = SDL_CreateWindow(
@@ -38,8 +45,7 @@ void SpaceInvadersGame::InitSDL()
     );
     if (m_sdlWindow == nullptr)
     {
-        std::cerr << "Failed to create SDL window. Error " << SDL_GetError() << std::endl;
-        std::exit(EXIT_FAILURE);
+        SDL_CRITICAL_ERROR("Failed to create window");
     }
 }
 
@@ -50,7 +56,112 @@ void SpaceInvadersGame::CleanupSDL()
 
 void SpaceInvadersGame::InitVulkan()
 {
+    VkApplicationInfo appInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+        .pApplicationName = m_pApplicationName,
+        .apiVersion = VK_API_VERSION_1_4
+    };
 
+    uint32_t instanceExtensionsCount{ 0 };
+    char const* const* instanceExtensions{ SDL_Vulkan_GetInstanceExtensions(&instanceExtensionsCount) };
+
+    VkInstanceCreateInfo instanceCI
+    {
+        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pApplicationInfo = &appInfo,
+        .enabledExtensionCount = instanceExtensionsCount,
+        .ppEnabledExtensionNames = instanceExtensions
+    };
+
+    VkResult vkResult;
+    vkResult = vkCreateInstance(&instanceCI, nullptr, &m_vkInstance); 
+    if (vkResult != VK_SUCCESS)
+    {
+        VULKAN_CRITICAL_ERROR("Failed to init instance", vkResult);
+    }
+
+    uint32_t deviceCount{ 0 };
+    vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, nullptr);
+    std::vector<VkPhysicalDevice> devices(deviceCount);
+    vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, devices.data());
+    if (vkResult != VK_SUCCESS)
+    {
+        VULKAN_CRITICAL_ERROR("Failed to enumerate physical devices", vkResult);
+    }
+    uint32_t deviceIndex{ 0 };
+    VkPhysicalDeviceProperties2 deviceProperties
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
+    };
+    vkGetPhysicalDeviceProperties2(devices[deviceIndex], &deviceProperties);
+    std::cout << "Selected device: " << deviceProperties.properties.deviceName <<  "\n";
+
+    uint32_t queueFamilyCount{ 0 };
+    vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, nullptr);
+    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, queueFamilies.data());
+    uint32_t queueFamily{ 0 };
+    for (size_t i = 0; i < queueFamilies.size(); ++i)
+    {
+        if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            queueFamily = i;
+            break;
+        }
+    }
+    if (!SDL_Vulkan_GetPresentationSupport(m_vkInstance, devices[deviceIndex], queueFamily))
+    {
+        SDL_CRITICAL_ERROR("Presentation not supported with provided Vulkan physical device and"
+        " queue family");
+    }
+
+    const float queuePriorities{ 1.0f };
+    VkDeviceQueueCreateInfo queueCI
+    {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .queueFamilyIndex = queueFamily,
+        .queueCount = 1,
+        .pQueuePriorities = &queuePriorities
+    };
+
+    const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    VkPhysicalDeviceVulkan12Features enabledVk12Features
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .descriptorIndexing = true,
+        .shaderSampledImageArrayNonUniformIndexing = true,
+        .descriptorBindingVariableDescriptorCount = true,
+        .runtimeDescriptorArray = true,
+        .bufferDeviceAddress = true
+    };
+    VkPhysicalDeviceVulkan13Features enabledVk13Features
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .pNext = &enabledVk12Features,
+        .synchronization2 = true,
+        .dynamicRendering = true
+    };
+    VkPhysicalDeviceFeatures enabledVk10Features
+    {
+        .samplerAnisotropy = VK_TRUE
+    };
+
+    VkDeviceCreateInfo deviceCI
+    {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = &enabledVk13Features,
+        .queueCreateInfoCount = 1,
+        .pQueueCreateInfos = &queueCI,
+        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
+        .ppEnabledExtensionNames = deviceExtensions.data(),
+        .pEnabledFeatures = &enabledVk10Features
+    };
+    vkResult = vkCreateDevice(devices[deviceIndex], &deviceCI, nullptr, &m_vkDevice);
+    if (vkResult != VK_SUCCESS)
+    {
+        VULKAN_CRITICAL_ERROR("Failed to create device handle", vkResult);
+    }
 }
 
 void SpaceInvadersGame::CleanupVulkan()
