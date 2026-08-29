@@ -4,6 +4,8 @@
 
 #include <vulkan/vulkan.h>
 
+#include "vk_mem_alloc.h"
+
 // Forward declarations.
 class SDL_Window;
 
@@ -65,6 +67,9 @@ private:
     const size_t m_windowWidth = 800;
     SDL_Window* m_sdlWindow = nullptr;
 
-    VkInstance m_vkInstance;
-    VkDevice m_vkDevice;
+    VkInstance m_vkInstance{ VK_NULL_HANDLE };
+    VkDevice m_vkDevice{ VK_NULL_HANDLE };
+    VkQueue m_vkQueue{ VK_NULL_HANDLE };
+
+    VmaAllocator m_vmaAllocator{ VK_NULL_HANDLE };
 };

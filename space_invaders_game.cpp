@@ -6,11 +6,12 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
-#define SDL_CRITICAL_ERROR(text) std::cerr << "SDL: " << text << ". Error " << SDL_GetError() << ".\n";\
-                        std::exit(EXIT_FAILURE);
-#define VULKAN_CRITICAL_ERROR(text, error_enum) std::cerr << "Vulkan: " << text << ". Error " <<\
-                                       error_enum << ".\n";\
-                                       std::exit(EXIT_FAILURE);
+#define SDL_CRITICAL_ERROR(text)\
+    std::cerr << "SDL: " << text << ". Error " << SDL_GetError() << ".\n";\
+    std::exit(EXIT_FAILURE);
+#define VULKAN_CRITICAL_ERROR(text, error_enum)\
+    std::cerr << "Vulkan: " << text << ". Error " << error_enum << ".\n";\
+    std::exit(EXIT_FAILURE);
 
 void SpaceInvadersGame::Run()
 {
@@ -161,6 +162,27 @@ void SpaceInvadersGame::InitVulkan()
     if (vkResult != VK_SUCCESS)
     {
         VULKAN_CRITICAL_ERROR("Failed to create device handle", vkResult);
+    }
+    vkGetDeviceQueue(m_vkDevice, queueFamily, 0, &m_vkQueue);
+
+    VmaVulkanFunctions vkFunctions
+    {
+        .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+        .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+        .vkCreateImage = vkCreateImage
+    };
+    VmaAllocatorCreateInfo allocatorCI
+    {
+        .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
+        .physicalDevice = devices[deviceIndex],
+        .device = m_vkDevice,
+        .pVulkanFunctions = &vkFunctions,
+        .instance = m_vkInstance
+    };
+    vkResult = vmaCreateAllocator(&allocatorCI, &m_vmaAllocator);
+    if (vkResult != VK_SUCCESS)
+    {
+        VULKAN_CRITICAL_ERROR("Failed to create VMA allocator", vkResult);
     }
 }
 
