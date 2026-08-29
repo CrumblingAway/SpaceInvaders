@@ -42,7 +42,7 @@ void SpaceInvadersGame::InitSDL()
         m_pApplicationName,
         m_windowWidth,
         m_windowHeight,
-        SDL_WINDOW_VULKAN
+        SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
     );
     if (m_sdlWindow == nullptr)
     {
@@ -183,6 +183,21 @@ void SpaceInvadersGame::InitVulkan()
     if (vkResult != VK_SUCCESS)
     {
         VULKAN_CRITICAL_ERROR("Failed to create VMA allocator", vkResult);
+    }
+
+    if (!SDL_Vulkan_CreateSurface(m_sdlWindow, m_vkInstance, nullptr, &m_vkSurface))
+    {
+        SDL_CRITICAL_ERROR("Failed to create Vulkan surface");
+    }
+    VkSurfaceCapabilitiesKHR surfaceCapabilities{};
+    vkResult = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+        devices[deviceIndex],
+        m_vkSurface,
+        &surfaceCapabilities
+    );
+    if (vkResult != VK_SUCCESS)
+    {
+        VULKAN_CRITICAL_ERROR("Failed to get physical device surface capabilities", vkResult);
     }
 }
 

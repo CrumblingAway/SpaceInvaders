@@ -72,4 +72,6 @@ private:
     VkQueue m_vkQueue{ VK_NULL_HANDLE };
 
     VmaAllocator m_vmaAllocator{ VK_NULL_HANDLE };
+
+    VkSurfaceKHR m_vkSurface{ VK_NULL_HANDLE };
 };
