@@ -211,7 +211,6 @@ void SpaceInvadersGame::InitVulkan()
         VULKAN_CRITICAL_ERROR("Failed to get physical device surface capabilities", vkResult);
     }
     #pragma endregion Create Vulkan surface.
-    
 }
 
 void SpaceInvadersGame::CleanupVulkan()
