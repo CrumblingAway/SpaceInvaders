@@ -57,7 +57,9 @@ void SpaceInvadersGame::CleanupSDL()
 
 void SpaceInvadersGame::InitVulkan()
 {
-    #pragma region Create instance.
+    VkResult vkResult;
+
+    { /* Instance. */
     VkApplicationInfo appInfo
     {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -76,24 +78,25 @@ void SpaceInvadersGame::InitVulkan()
         .ppEnabledExtensionNames = instanceExtensions
     };
 
-    VkResult vkResult;
     vkResult = vkCreateInstance(&instanceCI, nullptr, &m_vkInstance); 
     if (vkResult != VK_SUCCESS)
     {
         VULKAN_CRITICAL_ERROR("Failed to init instance", vkResult);
     }
-    #pragma endregion Create instance.
+    }
 
+    std::vector<VkPhysicalDevice> devices;
+    uint32_t deviceIndex{ 0 };
+    { /* Physical device. */
     #pragma region Select physical device.
     uint32_t deviceCount{ 0 };
     vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, nullptr);
-    std::vector<VkPhysicalDevice> devices(deviceCount);
+    devices.resize(deviceCount);
     vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, devices.data());
     if (vkResult != VK_SUCCESS)
     {
         VULKAN_CRITICAL_ERROR("Failed to enumerate physical devices", vkResult);
     }
-    uint32_t deviceIndex{ 0 };
     VkPhysicalDeviceProperties2 deviceProperties
     {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
@@ -101,13 +104,15 @@ void SpaceInvadersGame::InitVulkan()
     vkGetPhysicalDeviceProperties2(devices[deviceIndex], &deviceProperties);
     std::cout << "Selected device: " << deviceProperties.properties.deviceName <<  "\n";
     #pragma endregion Select physical device.
+    }
 
+    uint32_t queueFamily{ 0 };
+    { /* Queue family. */
     #pragma region Get queue family info.
     uint32_t queueFamilyCount{ 0 };
     vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, nullptr);
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, queueFamilies.data());
-    uint32_t queueFamily{ 0 };
     for (size_t i = 0; i < queueFamilies.size(); ++i)
     {
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
@@ -121,9 +126,9 @@ void SpaceInvadersGame::InitVulkan()
         SDL_CRITICAL_ERROR("Presentation not supported with provided Vulkan physical device and"
         " queue family");
     }
-    #pragma endregion Get queue family info.
+    }
 
-    #pragma region Create device.
+    { /* Device. */
     const float queuePriorities{ 1.0f };
     VkDeviceQueueCreateInfo queueCI
     {
@@ -171,9 +176,9 @@ void SpaceInvadersGame::InitVulkan()
         VULKAN_CRITICAL_ERROR("Failed to create device handle", vkResult);
     }
     vkGetDeviceQueue(m_vkDevice, queueFamily, 0, &m_vkQueue);
-    #pragma endregion Create device.
+    }
 
-    #pragma region VMA.
+    { /* VMA. */
     VmaVulkanFunctions vkFunctions
     {
         .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
@@ -193,14 +198,12 @@ void SpaceInvadersGame::InitVulkan()
     {
         VULKAN_CRITICAL_ERROR("Failed to create VMA allocator", vkResult);
     }
-    #pragma endregion VMA.
+    }
 
-    #pragma region Create Vulkan surface.
     if (!SDL_Vulkan_CreateSurface(m_sdlWindow, m_vkInstance, nullptr, &m_vkSurface))
     {
         SDL_CRITICAL_ERROR("Failed to create Vulkan surface");
     }
-    VkSurfaceCapabilitiesKHR surfaceCapabilities{};
     vkResult = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
         devices[deviceIndex],
         m_vkSurface,
@@ -210,7 +213,6 @@ void SpaceInvadersGame::InitVulkan()
     {
         VULKAN_CRITICAL_ERROR("Failed to get physical device surface capabilities", vkResult);
     }
-    #pragma endregion Create Vulkan surface.
 }
 
 void SpaceInvadersGame::CleanupVulkan()
