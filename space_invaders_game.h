@@ -81,4 +81,5 @@ private:
     VkSwapchainKHR m_vkSwapchain{ VK_NULL_HANDLE };
     std::vector<VkImage> m_vkSwapchainImages;
     std::vector<VkImageView> m_vkSwapchainImageViews;
+    VkImage m_vkDepthImage;
 };
