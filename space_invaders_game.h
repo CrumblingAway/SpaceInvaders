@@ -2,6 +2,7 @@
 
 #include <cstddef>
 
+#include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
 #include "vk_mem_alloc.h"
@@ -74,4 +75,5 @@ private:
     VmaAllocator m_vmaAllocator{ VK_NULL_HANDLE };
 
     VkSurfaceKHR m_vkSurface{ VK_NULL_HANDLE };
+    glm::ivec2 m_glmWindowSize{};
 };

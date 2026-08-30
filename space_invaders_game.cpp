@@ -200,7 +200,10 @@ void SpaceInvadersGame::InitVulkan()
     }
     }
 
-    if (!SDL_Vulkan_CreateSurface(m_sdlWindow, m_vkInstance, nullptr, &m_vkSurface))
+    VkSurfaceCapabilitiesKHR surfaceCapabilities{};
+    { /* Vulkan surface. */
+    if (!SDL_Vulkan_CreateSurface(m_sdlWindow, m_vkInstance, nullptr, &m_vkSurface)
+        || !SDL_GetWindowSize(m_sdlWindow, &m_glmWindowSize.x, &m_glmWindowSize.y))
     {
         SDL_CRITICAL_ERROR("Failed to create Vulkan surface");
     }
