@@ -1,7 +1,6 @@
 #include "space_invaders_game.h"
 
 #include <iostream>
-#include <vector>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
@@ -215,6 +214,53 @@ void SpaceInvadersGame::InitVulkan()
     if (vkResult != VK_SUCCESS)
     {
         VULKAN_CRITICAL_ERROR("Failed to get physical device surface capabilities", vkResult);
+    }
+    }
+
+    { /* Swapchain. */
+    VkExtent2D swapchainExtent{ surfaceCapabilities.currentExtent };
+    if (surfaceCapabilities.currentExtent.width == 0xFFFFFFFF)
+    {
+        swapchainExtent = {
+            .width = static_cast<uint32_t>(m_glmWindowSize.x),
+            .height = static_cast<uint32_t>(m_glmWindowSize.y),
+        };
+    }
+
+    const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
+    VkSwapchainCreateInfoKHR swapchainCI
+    {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = &m_vkSurface,
+        .minImageCount = surfaceCapabilities.minImageCount,
+        .imageFormat = imageFormat,
+        .imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR,
+        .imageExtent{ .width = swapchainExtent.width, .height = swapchainExtent.height },
+        .imageArrayLayers = 1,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .presentMode = VK_PRESENT_MODE_FIFO_KHR
+    };
+    vkResult = vkCreateSwapchainKHR(m_vkDevice, &swapchainCI, nullptr, &m_vkSwapchain);
+    if (vkResult != VK_SUCCESS)
+    {
+        VULKAN_CRITICAL_ERROR("Failed to create swapchain", vkResult);
+    }
+
+    uint32_t imageCount{ 0 };
+    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &imageCount, nullptr);
+    if (vkResult != VK_SUCCESS)
+    {
+        VULKAN_CRITICAL_ERROR("Failed to get swapchain images", vkResult);
+    }
+    m_vkSwapchainImages.resize(imageCount);
+    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &imageCount, m_vkSwapchainImages.data());
+    if (vkResult != VK_SUCCESS)
+    {
+        VULKAN_CRITICAL_ERROR("Failed to get swapchain images", vkResult);
+    }
+    m_vkSwapchainImageViews.resize(imageCount);
     }
 }
 

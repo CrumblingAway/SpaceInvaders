@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <vector>
 
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
@@ -76,4 +77,8 @@ private:
 
     VkSurfaceKHR m_vkSurface{ VK_NULL_HANDLE };
     glm::ivec2 m_glmWindowSize{};
+
+    VkSwapchainKHR m_vkSwapchain{ VK_NULL_HANDLE };
+    std::vector<VkImage> m_vkSwapchainImages;
+    std::vector<VkImageView> m_vkSwapchainImageViews;
 };
