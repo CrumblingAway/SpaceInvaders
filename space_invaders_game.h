@@ -84,4 +84,7 @@ private:
     VkImage m_vkDepthImage;
     VmaAllocation m_vmaDepthImageAllocation;
     VkImageView m_vkDepthImageView;
+
+    VkBuffer m_vkBuffer;
+    VmaAllocation m_vmaBufferAllocation;
 };

@@ -14,6 +14,13 @@
 #define PRINT_TINYOBJ_CRITICAL_ERROR(text, string_warn, string_error)\
     std::cerr << "tinyobj: " << text << ". Warning: " << string_warn << ". Error: " << string_error << ".\n";
 
+struct Vertex
+{
+    glm::vec3 pos;
+    glm::vec3 normal;
+    glm::vec2 uv;
+};
+
 void SpaceInvadersGame::Run()
 {
     Init();
@@ -358,6 +365,65 @@ bool SpaceInvadersGame::InitVulkan()
         return false;
     }
     }
+
+    { /* Load meshes. */
+    std::string tinyobj_warn;
+    std::string tinyobj_error;
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &tinyobj_warn, &tinyobj_error, "../assets/suzanne.obj"))
+    {
+        PRINT_TINYOBJ_CRITICAL_ERROR("Failed to load meshes", tinyobj_warn, tinyobj_error);
+        return false;
+    }
+
+    const VkDeviceSize indexCount{ shapes[0].mesh.indices.size() };
+    std::vector<Vertex> vertices{};
+    std::vector<uint16_t> indices{};
+    for (auto& index : shapes[0].mesh.indices)
+    {
+        Vertex v{
+            .pos = { attrib.vertices[index.vertex_index * 3], -attrib.vertices[index.vertex_index * 3 + 1], attrib.vertices[index.vertex_index * 3 + 2] },
+            .normal = { attrib.normals[index.normal_index * 3], -attrib.normals[index.normal_index * 3 + 1], attrib.normals[index.normal_index * 3 + 2] },
+            .uv = { attrib.texcoords[index.texcoord_index * 2], 1.0 - attrib.texcoords[index.texcoord_index * 2 + 1] }
+        };
+        vertices.push_back(v);
+        indices.push_back(indices.size());
+    }
+
+    VkDeviceSize vBufSize{ sizeof(Vertex) * vertices.size() };
+    VkDeviceSize iBufSize{ sizeof(uint16_t) * indices.size() };
+    VkBufferCreateInfo bufferCI
+    {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = vBufSize + iBufSize,
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+    };
+
+    VmaAllocationCreateInfo vBufferAllocationCI
+    {
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+                 | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
+                 | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO
+    };
+    VmaAllocationInfo vBufferAllocationInfo{};
+    vkResult = vmaCreateBuffer(
+        m_vmaAllocator,
+        &bufferCI,
+        &vBufferAllocationCI,
+        &m_vkBuffer,
+        &m_vmaBufferAllocation,
+        &vBufferAllocationInfo
+    );
+    if (vkResult != VK_SUCCESS)
+    {
+        PRINT_VULKAN_CRITICAL_ERROR("Failed to create VMA buffer", vkResult);
+        return false;
+    }
+    memcpy(vBufferAllocationInfo.pMappedData, vertices.data(), vBufSize);
+    memcpy(((char*)vBufferAllocationInfo.pMappedData) + vBufSize, indices.data(), iBufSize);
     }
 
     return true;
