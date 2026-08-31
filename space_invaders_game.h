@@ -48,7 +48,7 @@ private:
      * As this is the only windowing library this game accounts for, failure of this method results
      * in immediate termination of the application.
      */
-    void InitSDL();
+    bool InitSDL();
     void CleanupSDL();
 
     /**
@@ -57,7 +57,7 @@ private:
      * As this is the only graphics API this game accounts for, failure  of this method results in
      * immediate termination of the application.
      */
-    void InitVulkan();
+    bool InitVulkan();
     void CleanupVulkan();
 
     /**
@@ -82,4 +82,6 @@ private:
     std::vector<VkImage> m_vkSwapchainImages;
     std::vector<VkImageView> m_vkSwapchainImageViews;
     VkImage m_vkDepthImage;
+    VmaAllocation m_vmaDepthImageAllocation;
+    VkImageView m_vkDepthImageView;
 };

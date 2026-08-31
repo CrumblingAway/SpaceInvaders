@@ -1,16 +1,18 @@
 #include "space_invaders_game.h"
 
+#include "tiny_obj_loader.h"
+
 #include <iostream>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
-#define SDL_CRITICAL_ERROR(text)\
-    std::cerr << "SDL: " << text << ". Error " << SDL_GetError() << ".\n";\
-    std::exit(EXIT_FAILURE);
-#define VULKAN_CRITICAL_ERROR(text, error_enum)\
-    std::cerr << "Vulkan: " << text << ". Error " << error_enum << ".\n";\
-    std::exit(EXIT_FAILURE);
+#define PRINT_SDL_CRITICAL_ERROR(text)\
+    std::cerr << "SDL: " << text << ". Error " << SDL_GetError() << ".\n";
+#define PRINT_VULKAN_CRITICAL_ERROR(text, error_enum)\
+    std::cerr << "Vulkan: " << text << ". Error " << error_enum << ".\n";
+#define PRINT_TINYOBJ_CRITICAL_ERROR(text, string_warn, string_error)\
+    std::cerr << "tinyobj: " << text << ". Warning: " << string_warn << ". Error: " << string_error << ".\n";
 
 void SpaceInvadersGame::Run()
 {
@@ -26,15 +28,22 @@ const char *SpaceInvadersGame::GetName() const
 
 void SpaceInvadersGame::Init()
 {
-    InitSDL();
-    InitVulkan();
+    if (!InitSDL())
+    {
+
+    }
+    if (!InitVulkan())
+    {
+
+    }
 }
 
-void SpaceInvadersGame::InitSDL()
+bool SpaceInvadersGame::InitSDL()
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
-        SDL_CRITICAL_ERROR("Failed to initialize");
+        PRINT_SDL_CRITICAL_ERROR("Failed to initialize");
+        return false;
     }
 
     m_sdlWindow = SDL_CreateWindow(
@@ -45,8 +54,11 @@ void SpaceInvadersGame::InitSDL()
     );
     if (m_sdlWindow == nullptr)
     {
-        SDL_CRITICAL_ERROR("Failed to create window");
+        PRINT_SDL_CRITICAL_ERROR("Failed to create window");
+        return false;
     }
+
+    return true;
 }
 
 void SpaceInvadersGame::CleanupSDL()
@@ -54,7 +66,7 @@ void SpaceInvadersGame::CleanupSDL()
     SDL_DestroyWindow(m_sdlWindow);
 }
 
-void SpaceInvadersGame::InitVulkan()
+bool SpaceInvadersGame::InitVulkan()
 {
     VkResult vkResult;
 
@@ -80,7 +92,8 @@ void SpaceInvadersGame::InitVulkan()
     vkResult = vkCreateInstance(&instanceCI, nullptr, &m_vkInstance); 
     if (vkResult != VK_SUCCESS)
     {
-        VULKAN_CRITICAL_ERROR("Failed to init instance", vkResult);
+        PRINT_VULKAN_CRITICAL_ERROR("Failed to init instance", vkResult);
+        return false;
     }
     }
 
@@ -94,7 +107,8 @@ void SpaceInvadersGame::InitVulkan()
     vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, devices.data());
     if (vkResult != VK_SUCCESS)
     {
-        VULKAN_CRITICAL_ERROR("Failed to enumerate physical devices", vkResult);
+        PRINT_VULKAN_CRITICAL_ERROR("Failed to enumerate physical devices", vkResult);
+        return false;
     }
     VkPhysicalDeviceProperties2 deviceProperties
     {
@@ -122,8 +136,9 @@ void SpaceInvadersGame::InitVulkan()
     }
     if (!SDL_Vulkan_GetPresentationSupport(m_vkInstance, devices[deviceIndex], queueFamily))
     {
-        SDL_CRITICAL_ERROR("Presentation not supported with provided Vulkan physical device and"
+        PRINT_SDL_CRITICAL_ERROR("Presentation not supported with provided Vulkan physical device and"
         " queue family");
+        return false;
     }
     }
 
@@ -172,7 +187,8 @@ void SpaceInvadersGame::InitVulkan()
     vkResult = vkCreateDevice(devices[deviceIndex], &deviceCI, nullptr, &m_vkDevice);
     if (vkResult != VK_SUCCESS)
     {
-        VULKAN_CRITICAL_ERROR("Failed to create device handle", vkResult);
+        PRINT_VULKAN_CRITICAL_ERROR("Failed to create device handle", vkResult);
+        return false;
     }
     vkGetDeviceQueue(m_vkDevice, queueFamily, 0, &m_vkQueue);
     }
@@ -195,7 +211,8 @@ void SpaceInvadersGame::InitVulkan()
     vkResult = vmaCreateAllocator(&allocatorCI, &m_vmaAllocator);
     if (vkResult != VK_SUCCESS)
     {
-        VULKAN_CRITICAL_ERROR("Failed to create VMA allocator", vkResult);
+        PRINT_VULKAN_CRITICAL_ERROR("Failed to create VMA allocator", vkResult);
+        return false;
     }
     }
 
@@ -204,7 +221,8 @@ void SpaceInvadersGame::InitVulkan()
     if (!SDL_Vulkan_CreateSurface(m_sdlWindow, m_vkInstance, nullptr, &m_vkSurface)
         || !SDL_GetWindowSize(m_sdlWindow, &m_glmWindowSize.x, &m_glmWindowSize.y))
     {
-        SDL_CRITICAL_ERROR("Failed to create Vulkan surface");
+        PRINT_SDL_CRITICAL_ERROR("Failed to create Vulkan surface");
+        return false;
     }
     vkResult = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
         devices[deviceIndex],
@@ -213,7 +231,8 @@ void SpaceInvadersGame::InitVulkan()
     );
     if (vkResult != VK_SUCCESS)
     {
-        VULKAN_CRITICAL_ERROR("Failed to get physical device surface capabilities", vkResult);
+        PRINT_VULKAN_CRITICAL_ERROR("Failed to get physical device surface capabilities", vkResult);
+        return false;
     }
     }
 
@@ -245,20 +264,23 @@ void SpaceInvadersGame::InitVulkan()
     vkResult = vkCreateSwapchainKHR(m_vkDevice, &swapchainCI, nullptr, &m_vkSwapchain);
     if (vkResult != VK_SUCCESS)
     {
-        VULKAN_CRITICAL_ERROR("Failed to create swapchain", vkResult);
+        PRINT_VULKAN_CRITICAL_ERROR("Failed to create swapchain", vkResult);
+        return false;
     }
 
     uint32_t imageCount{ 0 };
     vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &imageCount, nullptr);
     if (vkResult != VK_SUCCESS)
     {
-        VULKAN_CRITICAL_ERROR("Failed to get swapchain images", vkResult);
+        PRINT_VULKAN_CRITICAL_ERROR("Failed to get swapchain images", vkResult);
+        return false;
     }
     m_vkSwapchainImages.resize(imageCount);
     vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &imageCount, m_vkSwapchainImages.data());
     if (vkResult != VK_SUCCESS)
     {
-        VULKAN_CRITICAL_ERROR("Failed to get swapchain images", vkResult);
+        PRINT_VULKAN_CRITICAL_ERROR("Failed to get swapchain images", vkResult);
+        return false;
     }
     m_vkSwapchainImageViews.resize(imageCount);
     }
@@ -302,6 +324,19 @@ void SpaceInvadersGame::InitVulkan()
         .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         .usage = VMA_MEMORY_USAGE_AUTO
     };
+    vkResult = vmaCreateImage(
+        m_vmaAllocator,
+        &depthImageCI,
+        &allocationCI,
+        &m_vkDepthImage,
+        &m_vmaDepthImageAllocation,
+        nullptr
+    );
+    if (vkResult != VK_SUCCESS)
+    {
+        PRINT_VULKAN_CRITICAL_ERROR("Failed to create depth image", vkResult);
+        return false;
+    }
 
     VkImageViewCreateInfo depthViewCI
     {
@@ -316,6 +351,8 @@ void SpaceInvadersGame::InitVulkan()
         }
     };
     }
+
+    return true;
 }
 
 void SpaceInvadersGame::CleanupVulkan()
