@@ -309,7 +309,8 @@ bool SpaceInvadersGame::InitVulkan()
         .format = depthFormat,
         .extent{
             .width = static_cast<uint32_t>(m_glmWindowSize.x),
-            .height = static_cast<uint32_t>(m_glmWindowSize.y)
+            .height = static_cast<uint32_t>(m_glmWindowSize.y),
+            .depth = 1
         },
         .mipLevels = 1,
         .arrayLayers = 1,
