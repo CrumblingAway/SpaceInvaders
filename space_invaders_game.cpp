@@ -351,6 +351,13 @@ bool SpaceInvadersGame::InitVulkan()
             .layerCount = 1
         }
     };
+    vkResult = vkCreateImageView(m_vkDevice, &depthViewCI, nullptr, &m_vkDepthImageView);
+    if (vkResult != VK_SUCCESS)
+    {
+        PRINT_VULKAN_CRITICAL_ERROR("Failed to create depth image view", vkResult);
+        return false;
+    }
+    }
     }
 
     return true;
