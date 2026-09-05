@@ -33,6 +33,8 @@ public:
 private:
     const char* m_pApplicationName = "Space Invaders";
 
+    static constexpr uint32_t m_maxFramesInFlight{ 2 };
+
     /**
      * Init all dependencies.
      * 
@@ -87,4 +89,8 @@ private:
 
     VkBuffer m_vkBuffer;
     VmaAllocation m_vmaBufferAllocation;
+
+    std::array<VkFence, m_maxFramesInFlight> m_vkFences;
+    std::array<VkSemaphore, m_maxFramesInFlight> m_vkImageAcquiredSemaphores;
+    std::vector<VkSemaphore> m_vkRenderCompleteSemaphores;
 };
