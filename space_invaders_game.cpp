@@ -516,6 +516,34 @@ bool SpaceInvadersGame::InitVulkan()
         }
     }
 
+    { /* Command buffers. */
+        VkCommandPoolCreateInfo commandPoolCI
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+            .queueFamilyIndex = queueFamily
+        };
+        vkResult = vkCreateCommandPool(m_vkDevice, &commandPoolCI, nullptr, &m_vkCommandPool);
+        if (vkResult != VK_SUCCESS)
+        {
+            PRINT_VULKAN_CRITICAL_ERROR("Failed to create command buffer pool", vkResult);
+            return false;
+        }
+
+        VkCommandBufferAllocateInfo commandBufferAllocateCI
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = m_vkCommandPool,
+            .commandBufferCount = m_maxFramesInFlight
+        };
+        vkResult = vkAllocateCommandBuffers(m_vkDevice, &commandBufferAllocateCI, m_vkCommandBuffers.data());
+        if (vkResult != VK_SUCCESS)
+        {
+            PRINT_VULKAN_CRITICAL_ERROR("Failed to allocate command buffers", vkResult);
+            return false;
+        }
+    }
+
     return true;
 }
 

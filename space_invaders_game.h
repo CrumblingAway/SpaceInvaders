@@ -93,4 +93,7 @@ private:
     std::array<VkFence, m_maxFramesInFlight> m_vkFences;
     std::array<VkSemaphore, m_maxFramesInFlight> m_vkImageAcquiredSemaphores;
     std::vector<VkSemaphore> m_vkRenderCompleteSemaphores;
+
+    VkCommandPool m_vkCommandPool{ VK_NULL_HANDLE };
+    std::array<VkCommandBuffer, m_maxFramesInFlight> m_vkCommandBuffers;
 };
