@@ -2,6 +2,7 @@
 
 #include "tiny_obj_loader.h"
 
+#include <array>
 #include <iostream>
 
 #include <ktx.h>
@@ -759,6 +760,45 @@ bool SpaceInvadersGame::InitVulkan()
         };
         vkUpdateDescriptorSets(m_vkDevice, 1, &writeDescSet, 0, nullptr);
     }
+    }
+
+    { /* Shaders. */
+    slang::createGlobalSession(m_slangGlobalSession.writeRef());
+    auto slangTargets{ std::to_array<slang::TargetDesc>({ {
+        .format{ SLANG_SPIRV },
+        .profile{ m_slangGlobalSession->findProfile("spirv_1_4") }
+    }})};
+    auto slangOptions{ std::to_array<slang::CompilerOptionEntry>({ {
+        slang::CompilerOptionName::EmitSpirvDirectly,
+        { slang::CompilerOptionValueKind::Int, 1 }
+    }})};
+    slang::SessionDesc slangSessionDesc
+    {
+        .targets{ slangTargets.data() },
+        .targetCount{ SlangInt(slangTargets.size()) },
+        .defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR,
+        .compilerOptionEntries{ slangOptions.data() },
+        .compilerOptionEntryCount{ uint32_t(slangOptions.size()) }
+    };
+    Slang::ComPtr<slang::ISession> slangSession;
+    m_slangGlobalSession->createSession(slangSessionDesc, slangSession.writeRef());
+
+    Slang::ComPtr<slang::IModule> slangModule
+    {
+        slangSession->loadModuleFromSource("triangle", "../assets/shader.slang", nullptr, nullptr)
+    };
+    Slang::ComPtr<ISlangBlob> spirv;
+    slangModule->getTargetCode(0, spirv.writeRef());
+
+    VkShaderModuleCreateInfo shaderModuleCI
+    {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = spirv->getBufferSize(),
+        .pCode = (uint32_t*)spirv->getBufferPointer()
+    };
+    VkShaderModule shaderModule{};
+    vkResult = vkCreateShaderModule(m_vkDevice, &shaderModuleCI, nullptr, &shaderModule);
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create shader module", vkResult);
     }
 
     return true;

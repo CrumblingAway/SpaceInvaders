@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 4.3)
+cmake_minimum_required(VERSION 3.28)
+set(CMAKE_CXX_STANDARD 23)
 
 project(space_invaders)
 
@@ -8,4 +9,5 @@ target_link_libraries(${PROJECT_NAME}
 	/usr/local/lib/libSDL3.so
 	/usr/local/lib/libvulkan.so
 	/usr/local/lib/libktx.so	
+	/usr/local/lib/libslang.so
 )

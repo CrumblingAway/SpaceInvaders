@@ -4,6 +4,8 @@
 #include <vector>
 
 #include <glm/glm.hpp>
+#include <slang/slang.h>
+#include <slang/slang-com-ptr.h>
 #include <vulkan/vulkan.h>
 
 #include "vk_mem_alloc.h"
@@ -109,4 +111,6 @@ private:
     VkDescriptorSetLayout m_vkDescriptorSetLayoutTex{ VK_NULL_HANDLE };
     VkDescriptorSet m_vkDescriptorSetTex{ VK_NULL_HANDLE };
     VkDescriptorPool m_vkDescriptorPool{ VK_NULL_HANDLE };
+
+    Slang::ComPtr<slang::IGlobalSession> m_slangGlobalSession;
 };
