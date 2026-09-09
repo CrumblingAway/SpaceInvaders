@@ -96,4 +96,17 @@ private:
 
     VkCommandPool m_vkCommandPool{ VK_NULL_HANDLE };
     std::array<VkCommandBuffer, m_maxFramesInFlight> m_vkCommandBuffers;
+
+    struct Texture
+    {
+        VmaAllocation allocation{ VK_NULL_HANDLE };
+        VkImage image{ VK_NULL_HANDLE };
+        VkImageView view{ VK_NULL_HANDLE };
+        VkSampler sampler{ VK_NULL_HANDLE };
+    };
+    std::array<Texture, 3> m_textures{};
+
+    VkDescriptorSetLayout m_vkDescriptorSetLayoutTex{ VK_NULL_HANDLE };
+    VkDescriptorSet m_vkDescriptorSetTex{ VK_NULL_HANDLE };
+    VkDescriptorPool m_vkDescriptorPool{ VK_NULL_HANDLE };
 };
