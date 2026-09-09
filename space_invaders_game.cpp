@@ -14,6 +14,8 @@
 #define PRINT_TINYOBJ_CRITICAL_ERROR(text, string_warn, string_error)\
     std::cerr << "tinyobj: " << text << ". Warning: " << string_warn << ". Error: " << string_error << ".\n";
 
+#define RETURN_FALSE_ON_FAIL_VULKAN(text, error_num) if (error_num != VK_SUCCESS) { PRINT_VULKAN_CRITICAL_ERROR(text, error_num); return false; }
+
 struct Vertex
 {
     glm::vec3 pos;
@@ -114,11 +116,7 @@ bool SpaceInvadersGame::InitVulkan()
     };
 
     vkResult = vkCreateInstance(&instanceCI, nullptr, &m_vkInstance); 
-    if (vkResult != VK_SUCCESS)
-    {
-        PRINT_VULKAN_CRITICAL_ERROR("Failed to init instance", vkResult);
-        return false;
-    }
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to init instance", vkResult);
     }
 
     std::vector<VkPhysicalDevice> devices;
@@ -129,11 +127,7 @@ bool SpaceInvadersGame::InitVulkan()
     vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, nullptr);
     devices.resize(deviceCount);
     vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, devices.data());
-    if (vkResult != VK_SUCCESS)
-    {
-        PRINT_VULKAN_CRITICAL_ERROR("Failed to enumerate physical devices", vkResult);
-        return false;
-    }
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to enumerate physical devices", vkResult);
     VkPhysicalDeviceProperties2 deviceProperties
     {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
@@ -209,11 +203,7 @@ bool SpaceInvadersGame::InitVulkan()
         .pEnabledFeatures = &enabledVk10Features
     };
     vkResult = vkCreateDevice(devices[deviceIndex], &deviceCI, nullptr, &m_vkDevice);
-    if (vkResult != VK_SUCCESS)
-    {
-        PRINT_VULKAN_CRITICAL_ERROR("Failed to create device handle", vkResult);
-        return false;
-    }
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create device handle", vkResult);
     vkGetDeviceQueue(m_vkDevice, queueFamily, 0, &m_vkQueue);
     }
 
@@ -233,11 +223,7 @@ bool SpaceInvadersGame::InitVulkan()
         .instance = m_vkInstance
     };
     vkResult = vmaCreateAllocator(&allocatorCI, &m_vmaAllocator);
-    if (vkResult != VK_SUCCESS)
-    {
-        PRINT_VULKAN_CRITICAL_ERROR("Failed to create VMA allocator", vkResult);
-        return false;
-    }
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA allocator", vkResult);
     }
 
     VkSurfaceCapabilitiesKHR surfaceCapabilities{};
@@ -253,11 +239,7 @@ bool SpaceInvadersGame::InitVulkan()
         m_vkSurface,
         &surfaceCapabilities
     );
-    if (vkResult != VK_SUCCESS)
-    {
-        PRINT_VULKAN_CRITICAL_ERROR("Failed to get physical device surface capabilities", vkResult);
-        return false;
-    }
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to get physical device surface capabilities", vkResult);
     }
 
     { /* Swapchain. */
@@ -286,26 +268,14 @@ bool SpaceInvadersGame::InitVulkan()
         .presentMode = VK_PRESENT_MODE_FIFO_KHR
     };
     vkResult = vkCreateSwapchainKHR(m_vkDevice, &swapchainCI, nullptr, &m_vkSwapchain);
-    if (vkResult != VK_SUCCESS)
-    {
-        PRINT_VULKAN_CRITICAL_ERROR("Failed to create swapchain", vkResult);
-        return false;
-    }
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create swapchain", vkResult);
 
     uint32_t imageCount{ 0 };
     vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &imageCount, nullptr);
-    if (vkResult != VK_SUCCESS)
-    {
-        PRINT_VULKAN_CRITICAL_ERROR("Failed to get swapchain images", vkResult);
-        return false;
-    }
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to get swapchain images", vkResult);
     m_vkSwapchainImages.resize(imageCount);
     vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &imageCount, m_vkSwapchainImages.data());
-    if (vkResult != VK_SUCCESS)
-    {
-        PRINT_VULKAN_CRITICAL_ERROR("Failed to get swapchain images", vkResult);
-        return false;
-    }
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to get swapchain images", vkResult);
     m_vkSwapchainImageViews.resize(imageCount);
     }
 
@@ -357,11 +327,7 @@ bool SpaceInvadersGame::InitVulkan()
         &m_vmaDepthImageAllocation,
         nullptr
     );
-    if (vkResult != VK_SUCCESS)
-    {
-        PRINT_VULKAN_CRITICAL_ERROR("Failed to create depth image", vkResult);
-        return false;
-    }
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create depth image", vkResult);
 
     VkImageViewCreateInfo depthViewCI
     {
@@ -376,11 +342,7 @@ bool SpaceInvadersGame::InitVulkan()
         }
     };
     vkResult = vkCreateImageView(m_vkDevice, &depthViewCI, nullptr, &m_vkDepthImageView);
-    if (vkResult != VK_SUCCESS)
-    {
-        PRINT_VULKAN_CRITICAL_ERROR("Failed to create depth image view", vkResult);
-        return false;
-    }
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create depth image view", vkResult);
     }
 
     { /* Load meshes. */
@@ -434,11 +396,7 @@ bool SpaceInvadersGame::InitVulkan()
         &m_vmaBufferAllocation,
         &vBufferAllocationInfo
     );
-    if (vkResult != VK_SUCCESS)
-    {
-        PRINT_VULKAN_CRITICAL_ERROR("Failed to create VMA buffer", vkResult);
-        return false;
-    }
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
     memcpy(vBufferAllocationInfo.pMappedData, vertices.data(), vBufSize);
     memcpy(((char*)vBufferAllocationInfo.pMappedData) + vBufSize, indices.data(), iBufSize);
     }
@@ -470,11 +428,7 @@ bool SpaceInvadersGame::InitVulkan()
                 &shaderDataBuffers[i].allocation,
                 &shaderDataBuffers[i].allocationInfo
             );
-            if (vkResult != VK_SUCCESS)
-            {
-                PRINT_VULKAN_CRITICAL_ERROR("Failed to create VMA buffer", vkResult);
-                return false;
-            }
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
 
             VkBufferDeviceAddressInfo uBufferBdaInfo
             {
@@ -496,22 +450,14 @@ bool SpaceInvadersGame::InitVulkan()
         for (uint32_t i = 0; i < m_maxFramesInFlight; ++i)
         {
             vkResult = vkCreateFence(m_vkDevice, &fenceCI, nullptr, &m_vkFences[i]);
-            if (vkResult != VK_SUCCESS)
-            {
-                PRINT_VULKAN_CRITICAL_ERROR("Failed to create fences", vkResult);
-                return false;
-            }
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to create fences", vkResult);
             vkResult = vkCreateSemaphore(m_vkDevice, &semaphoreCI, nullptr, &m_vkImageAcquiredSemaphores[i]);
-            if (vkResult != VK_SUCCESS)
-            {
-                PRINT_VULKAN_CRITICAL_ERROR("Failed to create semaphores", vkResult);
-                return false;
-            }
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphores", vkResult);
             m_vkRenderCompleteSemaphores.resize(m_vkSwapchainImages.size());
             for (auto& semaphore : m_vkRenderCompleteSemaphores)
             {
                 vkResult = vkCreateSemaphore(m_vkDevice, &semaphoreCI, nullptr, &semaphore);
-                return false;
+                RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphore", vkResult);
             }
         }
     }
@@ -524,11 +470,7 @@ bool SpaceInvadersGame::InitVulkan()
             .queueFamilyIndex = queueFamily
         };
         vkResult = vkCreateCommandPool(m_vkDevice, &commandPoolCI, nullptr, &m_vkCommandPool);
-        if (vkResult != VK_SUCCESS)
-        {
-            PRINT_VULKAN_CRITICAL_ERROR("Failed to create command buffer pool", vkResult);
-            return false;
-        }
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create command buffer pool", vkResult);
 
         VkCommandBufferAllocateInfo commandBufferAllocateCI
         {
