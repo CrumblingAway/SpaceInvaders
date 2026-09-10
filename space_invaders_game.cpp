@@ -245,6 +245,7 @@ bool SpaceInvadersGame::InitVulkan()
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to get physical device surface capabilities", vkResult);
     }
 
+    const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
     { /* Swapchain. */
     VkExtent2D swapchainExtent{ surfaceCapabilities.currentExtent };
     if (surfaceCapabilities.currentExtent.width == 0xFFFFFFFF)
@@ -255,7 +256,6 @@ bool SpaceInvadersGame::InitVulkan()
         };
     }
 
-    const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
     VkSwapchainCreateInfoKHR swapchainCI
     {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -282,12 +282,12 @@ bool SpaceInvadersGame::InitVulkan()
     m_vkSwapchainImageViews.resize(imageCount);
     }
 
+    VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
     { /* Depth attachment. */
     std::vector<VkFormat> depthFormatList{
         VK_FORMAT_D32_SFLOAT_S8_UINT,
         VK_FORMAT_D24_UNORM_S8_UINT
     };
-    VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
     for (VkFormat& format : depthFormatList)
     {
         VkFormatProperties2 formatProperties{ .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
@@ -762,6 +762,9 @@ bool SpaceInvadersGame::InitVulkan()
     }
     }
 
+    {} // Unknown. Removing these braces means vscode does not recognize the braces below as foldable.
+
+    VkShaderModule shaderModule{};
     { /* Shaders. */
     slang::createGlobalSession(m_slangGlobalSession.writeRef());
     auto slangTargets{ std::to_array<slang::TargetDesc>({ {
@@ -796,9 +799,146 @@ bool SpaceInvadersGame::InitVulkan()
         .codeSize = spirv->getBufferSize(),
         .pCode = (uint32_t*)spirv->getBufferPointer()
     };
-    VkShaderModule shaderModule{};
     vkResult = vkCreateShaderModule(m_vkDevice, &shaderModuleCI, nullptr, &shaderModule);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create shader module", vkResult);
+    }
+
+    { /* Graphics pipeline. */
+    VkPushConstantRange pushConstantRange
+    {
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .size = sizeof(VkDeviceAddress)
+    };
+    VkPipelineLayoutCreateInfo pipelineLayoutCI
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 1,
+        .pSetLayouts = &m_vkDescriptorSetLayoutTex,
+        .pushConstantRangeCount = 1,
+        .pPushConstantRanges = &pushConstantRange
+    };
+    vkResult = vkCreatePipelineLayout(m_vkDevice, &pipelineLayoutCI, nullptr, &m_vkPipelineLayout);
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create pipeline layout", vkResult);
+
+    VkVertexInputBindingDescription vertexBinding
+    {
+        .binding = 0,
+        .stride = sizeof(Vertex),
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+    };
+
+    std::vector<VkVertexInputAttributeDescription> vertexAttributes{
+        { .location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT },
+        { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex, normal) },
+        { .location = 2, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = offsetof(Vertex, uv) },
+    };
+
+    VkPipelineVertexInputStateCreateInfo vertexInputState
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &vertexBinding,
+        .vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexAttributes.size()),
+        .pVertexAttributeDescriptions = vertexAttributes.data()
+    };
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyState
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
+    };
+
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStages
+    {
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = VK_SHADER_STAGE_VERTEX_BIT,
+            .module = shaderModule,
+            .pName = "main"
+        },
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .module = shaderModule,
+            .pName = "main"
+        }
+    };
+
+    VkPipelineViewportStateCreateInfo viewportState
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .scissorCount = 1
+    };
+    std::vector<VkDynamicState> dynamicStates{
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR
+    };
+    VkPipelineDynamicStateCreateInfo dynamicState
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
+        .pDynamicStates = dynamicStates.data()
+    };
+
+    VkPipelineDepthStencilStateCreateInfo depthStencilState
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable = VK_TRUE,
+        .depthWriteEnable = VK_TRUE,
+        .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL
+    };
+
+    VkPipelineRenderingCreateInfo renderingCI
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+        .colorAttachmentCount = 1,
+        .pColorAttachmentFormats = &imageFormat,
+        .depthAttachmentFormat = depthFormat
+    };
+
+    VkPipelineColorBlendAttachmentState blendAttachment{
+        .colorWriteMask = 0xF
+    };
+    VkPipelineColorBlendStateCreateInfo colorBlendState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .attachmentCount = 1,
+        .pAttachments = &blendAttachment
+    };
+    VkPipelineRasterizationStateCreateInfo rasterizationState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .lineWidth = 1.0f
+    };
+    VkPipelineMultisampleStateCreateInfo multisampleState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT
+    };
+
+    VkGraphicsPipelineCreateInfo pipelineCI
+    {
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext = &renderingCI,
+        .stageCount = static_cast<uint32_t>(shaderStages.size()),
+        .pStages = shaderStages.data(),
+        .pVertexInputState = &vertexInputState,
+        .pInputAssemblyState = &inputAssemblyState,
+        .pViewportState = &viewportState,
+        .pRasterizationState = &rasterizationState,
+        .pMultisampleState = &multisampleState,
+        .pDepthStencilState = &depthStencilState,
+        .pColorBlendState = &colorBlendState,
+        .pDynamicState = &dynamicState,
+        .layout = m_vkPipelineLayout
+    };
+    vkResult = vkCreateGraphicsPipelines(
+        m_vkDevice,
+        VK_NULL_HANDLE,
+        1,
+        &pipelineCI,
+        nullptr,
+        &m_vkPipeline
+    );
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create graphics pipeline", vkResult);
     }
 
     return true;

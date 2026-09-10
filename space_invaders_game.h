@@ -113,4 +113,7 @@ private:
     VkDescriptorPool m_vkDescriptorPool{ VK_NULL_HANDLE };
 
     Slang::ComPtr<slang::IGlobalSession> m_slangGlobalSession;
+
+    VkPipeline m_vkPipeline{ VK_NULL_HANDLE };
+    VkPipelineLayout m_vkPipelineLayout{ VK_NULL_HANDLE };
 };
