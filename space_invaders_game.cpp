@@ -17,7 +17,12 @@
 #define PRINT_TINYOBJ_CRITICAL_ERROR(text, string_warn, string_error)\
     std::cerr << "tinyobj: " << text << ". Warning: " << string_warn << ". Error: " << string_error << ".\n";
 
-#define RETURN_FALSE_ON_FAIL_VULKAN(text, error_num) if (error_num != VK_SUCCESS) { PRINT_VULKAN_CRITICAL_ERROR(text, error_num); return false; }
+#define RETURN_FALSE_ON_FAIL_VULKAN(text, error_num)\
+    if (error_num != VK_SUCCESS)\
+    {\
+        PRINT_VULKAN_CRITICAL_ERROR(text, error_num);\
+        return false;\
+    }
 
 struct Vertex
 {
