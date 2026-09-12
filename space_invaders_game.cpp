@@ -5,6 +5,8 @@
 #include <array>
 #include <iostream>
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <ktx.h>
 #include <ktxvulkan.h>
 #include <SDL3/SDL.h>
@@ -29,23 +31,6 @@ struct Vertex
     glm::vec3 pos;
     glm::vec3 normal;
     glm::vec2 uv;
-};
-
-struct ShaderDataBuffer
-{
-    VmaAllocation allocation{ VK_NULL_HANDLE };
-    VmaAllocationInfo allocationInfo{};
-    VkBuffer buffer{ VK_NULL_HANDLE };
-    VkDeviceAddress deviceAddress{};
-};
-
-struct ShaderData
-{
-    glm::mat4 projection;
-    glm::mat4 view;
-    glm::mat4 model[3];
-    glm::vec4 lightPos{ 0.0f, -10.0f, 10.0f, 0.0f };
-    uint32_t selected{ 1 };
 };
 
 bool SpaceInvadersGame::Run()
@@ -123,20 +108,18 @@ bool SpaceInvadersGame::InitVulkan()
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to init instance", vkResult);
     }
 
-    std::vector<VkPhysicalDevice> devices;
-    uint32_t deviceIndex{ 0 };
     { /* Physical device. */
     #pragma region Select physical device.
     uint32_t deviceCount{ 0 };
     vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, nullptr);
-    devices.resize(deviceCount);
-    vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, devices.data());
+    m_vkDevices.resize(deviceCount);
+    vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, m_vkDevices.data());
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to enumerate physical devices", vkResult);
     VkPhysicalDeviceProperties2 deviceProperties
     {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
     };
-    vkGetPhysicalDeviceProperties2(devices[deviceIndex], &deviceProperties);
+    vkGetPhysicalDeviceProperties2(m_vkDevices[m_deviceIndex], &deviceProperties);
     std::cout << "Selected device: " << deviceProperties.properties.deviceName <<  "\n";
     #pragma endregion Select physical device.
     }
@@ -145,9 +128,9 @@ bool SpaceInvadersGame::InitVulkan()
     { /* Queue family. */
     #pragma region Get queue family info.
     uint32_t queueFamilyCount{ 0 };
-    vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(m_vkDevices[m_deviceIndex], &queueFamilyCount, nullptr);
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, queueFamilies.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(m_vkDevices[m_deviceIndex], &queueFamilyCount, queueFamilies.data());
     for (size_t i = 0; i < queueFamilies.size(); ++i)
     {
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
@@ -156,7 +139,7 @@ bool SpaceInvadersGame::InitVulkan()
             break;
         }
     }
-    if (!SDL_Vulkan_GetPresentationSupport(m_vkInstance, devices[deviceIndex], queueFamily))
+    if (!SDL_Vulkan_GetPresentationSupport(m_vkInstance, m_vkDevices[m_deviceIndex], queueFamily))
     {
         PRINT_SDL_CRITICAL_ERROR("Presentation not supported with provided Vulkan physical device and"
         " queue family");
@@ -206,7 +189,7 @@ bool SpaceInvadersGame::InitVulkan()
         .ppEnabledExtensionNames = deviceExtensions.data(),
         .pEnabledFeatures = &enabledVk10Features
     };
-    vkResult = vkCreateDevice(devices[deviceIndex], &deviceCI, nullptr, &m_vkDevice);
+    vkResult = vkCreateDevice(m_vkDevices[m_deviceIndex], &deviceCI, nullptr, &m_vkDevice);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create device handle", vkResult);
     vkGetDeviceQueue(m_vkDevice, queueFamily, 0, &m_vkQueue);
     }
@@ -221,7 +204,7 @@ bool SpaceInvadersGame::InitVulkan()
     VmaAllocatorCreateInfo allocatorCI
     {
         .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
-        .physicalDevice = devices[deviceIndex],
+        .physicalDevice = m_vkDevices[m_deviceIndex],
         .device = m_vkDevice,
         .pVulkanFunctions = &vkFunctions,
         .instance = m_vkInstance
@@ -230,7 +213,6 @@ bool SpaceInvadersGame::InitVulkan()
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA allocator", vkResult);
     }
 
-    VkSurfaceCapabilitiesKHR surfaceCapabilities{};
     { /* Vulkan surface. */
     if (!SDL_Vulkan_CreateSurface(m_sdlWindow, m_vkInstance, nullptr, &m_vkSurface)
         || !SDL_GetWindowSize(m_sdlWindow, &m_glmWindowSize.x, &m_glmWindowSize.y))
@@ -239,17 +221,16 @@ bool SpaceInvadersGame::InitVulkan()
         return false;
     }
     vkResult = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        devices[deviceIndex],
+        m_vkDevices[m_deviceIndex],
         m_vkSurface,
-        &surfaceCapabilities
+        &m_surfaceCapabilities
     );
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to get physical device surface capabilities", vkResult);
     }
 
-    const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
     { /* Swapchain. */
-    VkExtent2D swapchainExtent{ surfaceCapabilities.currentExtent };
-    if (surfaceCapabilities.currentExtent.width == 0xFFFFFFFF)
+    VkExtent2D swapchainExtent{ m_surfaceCapabilities.currentExtent };
+    if (m_surfaceCapabilities.currentExtent.width == 0xFFFFFFFF)
     {
         swapchainExtent = {
             .width = static_cast<uint32_t>(m_glmWindowSize.x),
@@ -257,12 +238,12 @@ bool SpaceInvadersGame::InitVulkan()
         };
     }
 
-    VkSwapchainCreateInfoKHR swapchainCI
+    m_swapchainCI = 
     {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = m_vkSurface,
-        .minImageCount = surfaceCapabilities.minImageCount,
-        .imageFormat = imageFormat,
+        .minImageCount = m_surfaceCapabilities.minImageCount,
+        .imageFormat = m_imageFormat,
         .imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR,
         .imageExtent{ .width = swapchainExtent.width, .height = swapchainExtent.height },
         .imageArrayLayers = 1,
@@ -271,19 +252,17 @@ bool SpaceInvadersGame::InitVulkan()
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         .presentMode = VK_PRESENT_MODE_FIFO_KHR
     };
-    vkResult = vkCreateSwapchainKHR(m_vkDevice, &swapchainCI, nullptr, &m_vkSwapchain);
+    vkResult = vkCreateSwapchainKHR(m_vkDevice, &m_swapchainCI, nullptr, &m_vkSwapchain);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create swapchain", vkResult);
 
-    uint32_t imageCount{ 0 };
-    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &imageCount, nullptr);
+    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &m_imageCount, nullptr);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to get swapchain images", vkResult);
-    m_vkSwapchainImages.resize(imageCount);
-    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &imageCount, m_vkSwapchainImages.data());
+    m_vkSwapchainImages.resize(m_imageCount);
+    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &m_imageCount, m_vkSwapchainImages.data());
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to get swapchain images", vkResult);
-    m_vkSwapchainImageViews.resize(imageCount);
+    m_vkSwapchainImageViews.resize(m_imageCount);
     }
 
-    VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
     { /* Depth attachment. */
     std::vector<VkFormat> depthFormatList{
         VK_FORMAT_D32_SFLOAT_S8_UINT,
@@ -292,19 +271,19 @@ bool SpaceInvadersGame::InitVulkan()
     for (VkFormat& format : depthFormatList)
     {
         VkFormatProperties2 formatProperties{ .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
-        vkGetPhysicalDeviceFormatProperties2(devices[deviceIndex], format, &formatProperties);
+        vkGetPhysicalDeviceFormatProperties2(m_vkDevices[m_deviceIndex], format, &formatProperties);
         if (formatProperties.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {
-            depthFormat = format;
+            m_depthFormat = format;
             break;
         }
     }
 
-    VkImageCreateInfo depthImageCI
+    m_depthImageCI =
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
-        .format = depthFormat,
+        .format = m_depthFormat,
         .extent{
             .width = static_cast<uint32_t>(m_glmWindowSize.x),
             .height = static_cast<uint32_t>(m_glmWindowSize.y),
@@ -325,7 +304,7 @@ bool SpaceInvadersGame::InitVulkan()
     };
     vkResult = vmaCreateImage(
         m_vmaAllocator,
-        &depthImageCI,
+        &m_depthImageCI,
         &allocationCI,
         &m_vkDepthImage,
         &m_vmaDepthImageAllocation,
@@ -338,7 +317,7 @@ bool SpaceInvadersGame::InitVulkan()
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = m_vkDepthImage,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = depthFormat,
+        .format = m_depthFormat,
         .subresourceRange{
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
             .levelCount = 1,
@@ -361,7 +340,7 @@ bool SpaceInvadersGame::InitVulkan()
         return false;
     }
 
-    const VkDeviceSize indexCount{ shapes[0].mesh.indices.size() };
+    m_vkIndexCount = shapes[0].mesh.indices.size();
     std::vector<Vertex> vertices{};
     std::vector<uint16_t> indices{};
     for (auto& index : shapes[0].mesh.indices)
@@ -375,12 +354,12 @@ bool SpaceInvadersGame::InitVulkan()
         indices.push_back(indices.size());
     }
 
-    VkDeviceSize vBufSize{ sizeof(Vertex) * vertices.size() };
+    m_vkBufSize = sizeof(Vertex) * vertices.size();
     VkDeviceSize iBufSize{ sizeof(uint16_t) * indices.size() };
     VkBufferCreateInfo bufferCI
     {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = vBufSize + iBufSize,
+        .size = m_vkBufSize + iBufSize,
         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
     };
 
@@ -401,69 +380,62 @@ bool SpaceInvadersGame::InitVulkan()
         &vBufferAllocationInfo
     );
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
-    memcpy(vBufferAllocationInfo.pMappedData, vertices.data(), vBufSize);
-    memcpy(((char*)vBufferAllocationInfo.pMappedData) + vBufSize, indices.data(), iBufSize);
+    memcpy(vBufferAllocationInfo.pMappedData, vertices.data(), m_vkBufSize);
+    memcpy(((char*)vBufferAllocationInfo.pMappedData) + m_vkBufSize, indices.data(), iBufSize);
     }
 
     { /* Parallelism. */
-        std::array<ShaderDataBuffer, m_maxFramesInFlight> shaderDataBuffers;
-        std::array<VkCommandBuffer, m_maxFramesInFlight> commandBuffers;
-
-        for (uint32_t i = 0; i < m_maxFramesInFlight; ++i)
+    for (uint32_t i = 0; i < m_maxFramesInFlight; ++i)
+    {
+        VkBufferCreateInfo uBufferCI
         {
-            VkBufferCreateInfo uBufferCI
-            {
-                .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                .size = sizeof(ShaderData),
-                .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-            };
-            VmaAllocationCreateInfo uBufferAllocCI
-            {
-                .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-                         | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
-                         | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-                .usage = VMA_MEMORY_USAGE_AUTO
-            };
-            vkResult = vmaCreateBuffer(
-                m_vmaAllocator,
-                &uBufferCI,
-                &uBufferAllocCI,
-                &shaderDataBuffers[i].buffer,
-                &shaderDataBuffers[i].allocation,
-                &shaderDataBuffers[i].allocationInfo
-            );
-            RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
-
-            VkBufferDeviceAddressInfo uBufferBdaInfo
-            {
-                .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-                .buffer = shaderDataBuffers[i].buffer
-            };
-            shaderDataBuffers[i].deviceAddress = vkGetBufferDeviceAddress(m_vkDevice, &uBufferBdaInfo);
-        }
-
-        VkSemaphoreCreateInfo semaphoreCI
-        {
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .size = sizeof(ShaderData),
+            .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
         };
-        VkFenceCreateInfo fenceCI
+        VmaAllocationCreateInfo uBufferAllocCI
         {
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-            .flags = VK_FENCE_CREATE_SIGNALED_BIT
+            .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+                        | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
+                        | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO
         };
-        for (uint32_t i = 0; i < m_maxFramesInFlight; ++i)
+        vkResult = vmaCreateBuffer(
+            m_vmaAllocator,
+            &uBufferCI,
+            &uBufferAllocCI,
+            &m_shaderDataBuffers[i].buffer,
+            &m_shaderDataBuffers[i].allocation,
+            &m_shaderDataBuffers[i].allocationInfo
+        );
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
+
+        VkBufferDeviceAddressInfo uBufferBdaInfo
         {
-            vkResult = vkCreateFence(m_vkDevice, &fenceCI, nullptr, &m_vkFences[i]);
-            RETURN_FALSE_ON_FAIL_VULKAN("Failed to create fences", vkResult);
-            vkResult = vkCreateSemaphore(m_vkDevice, &semaphoreCI, nullptr, &m_vkImageAcquiredSemaphores[i]);
-            RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphores", vkResult);
-            m_vkRenderCompleteSemaphores.resize(m_vkSwapchainImages.size());
-            for (auto& semaphore : m_vkRenderCompleteSemaphores)
-            {
-                vkResult = vkCreateSemaphore(m_vkDevice, &semaphoreCI, nullptr, &semaphore);
-                RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphore", vkResult);
-            }
+            .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+            .buffer = m_shaderDataBuffers[i].buffer
+        };
+        m_shaderDataBuffers[i].deviceAddress = vkGetBufferDeviceAddress(m_vkDevice, &uBufferBdaInfo);
+    }
+
+    VkFenceCreateInfo fenceCI
+    {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT
+    };
+    for (uint32_t i = 0; i < m_maxFramesInFlight; ++i)
+    {
+        vkResult = vkCreateFence(m_vkDevice, &fenceCI, nullptr, &m_vkFences[i]);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create fences", vkResult);
+        vkResult = vkCreateSemaphore(m_vkDevice, &m_semaphoreCI, nullptr, &m_vkImageAcquiredSemaphores[i]);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphores", vkResult);
+        m_vkRenderCompleteSemaphores.resize(m_vkSwapchainImages.size());
+        for (auto& semaphore : m_vkRenderCompleteSemaphores)
+        {
+            vkResult = vkCreateSemaphore(m_vkDevice, &m_semaphoreCI, nullptr, &semaphore);
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphore", vkResult);
         }
+    }
     }
 
     { /* Command buffers. */
@@ -894,8 +866,8 @@ bool SpaceInvadersGame::InitVulkan()
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = 1,
-        .pColorAttachmentFormats = &imageFormat,
-        .depthAttachmentFormat = depthFormat
+        .pColorAttachmentFormats = &m_imageFormat,
+        .depthAttachmentFormat = m_depthFormat
     };
 
     VkPipelineColorBlendAttachmentState blendAttachment{
@@ -952,7 +924,416 @@ bool SpaceInvadersGame::CleanupVulkan()
 
 bool SpaceInvadersGame::MainLoop()
 {
+    uint64_t lastTime{ SDL_GetTicks() };
+    bool quit{ false };
+    VkResult vkResult;
 
+    while (!quit)
+    {
+        assert(m_frameIndex < m_maxFramesInFlight);
+
+        { /* Wait on fence. */
+        vkResult = vkWaitForFences(m_vkDevice, 1, &m_vkFences[m_frameIndex], true, UINT64_MAX);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to wait for fence", vkResult);
+        vkResult = vkResetFences(m_vkDevice, 1, &m_vkFences[m_frameIndex]);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to reset fence", vkResult);
+        }
+
+        { /* Acquire next image. */
+        vkResult = vkAcquireNextImageKHR(
+            m_vkDevice,
+            m_vkSwapchain,
+            UINT64_MAX,
+            m_vkImageAcquiredSemaphores[m_frameIndex],
+            VK_NULL_HANDLE,
+            &m_imageIndex
+        ); 
+        if (!CheckSwapchain(vkResult))
+        {
+            return false;
+        }
+        }
+
+        { /* Update shader data. */
+        m_shaderData.projection = glm::perspective(
+            glm::radians(45.0f),
+            (float)m_glmWindowSize.x / (float) m_glmWindowSize.y,
+            0.1f,
+            32.0f
+        );
+        m_shaderData.view = glm::translate(glm::mat4(1.0f), m_camPos);
+        for (auto i = 0; i < 3; ++i)
+        {
+            auto instancePos = glm::vec3((float)(i - 1) * 3.0f, 0.0f, 0.0f);
+            m_shaderData.model[i] = glm::translate(glm::mat4(1.0f), instancePos)
+                                    * glm::mat4_cast(glm::quat(m_objectRotations[i]));
+        }
+        memcpy(m_shaderDataBuffers[m_frameIndex].allocationInfo.pMappedData, &m_shaderData, sizeof(ShaderData));
+        }
+        
+        auto cb = m_vkCommandBuffers[m_frameIndex];
+        { /* Record command buffer. */
+        vkResult = vkResetCommandBuffer(cb, 0);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to reset command buffer", vkResult);
+
+        VkCommandBufferBeginInfo cbBI
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+        };
+        vkResult = vkBeginCommandBuffer(cb, &cbBI);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to begin command buffer", vkResult);
+
+        std::array<VkImageMemoryBarrier2, 2> outputBarriers
+        {
+            VkImageMemoryBarrier2
+            {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+                .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .srcAccessMask = 0,
+                .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                .image = m_vkSwapchainImages[m_imageIndex],
+                .subresourceRange{
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .levelCount = 1,
+                    .layerCount = 1
+                }
+            },
+            VkImageMemoryBarrier2
+            {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+                .srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+                .srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                .image = m_vkDepthImage,
+                .subresourceRange{
+                    .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+                    .levelCount = 1,
+                    .layerCount = 1
+                }
+            }
+        };
+        VkDependencyInfo barrierDependencyInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .imageMemoryBarrierCount = static_cast<uint32_t>(outputBarriers.size()),
+            .pImageMemoryBarriers = outputBarriers.data()
+        };
+        vkCmdPipelineBarrier2(cb, &barrierDependencyInfo);
+
+        VkRenderingAttachmentInfo colorAttachmentInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = m_vkSwapchainImageViews[m_imageIndex],
+            .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .clearValue{ .color{ 0.0f, 0.0f, 0.2f, 1.0f }}
+        };
+        VkRenderingAttachmentInfo depthAttachmentInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = m_vkDepthImageView,
+            .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .clearValue = { .depthStencil = { 1.0f, 0 } }
+        };
+
+        VkRenderingInfo renderingInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+            .renderArea{
+                .extent {
+                    .width = static_cast<uint32_t>(m_glmWindowSize.x),
+                    .height = static_cast<uint32_t>(m_glmWindowSize.y)
+                }
+            },
+            .layerCount = 1,
+            .colorAttachmentCount = 1,
+            .pColorAttachments = &colorAttachmentInfo,
+            .pDepthAttachment = &depthAttachmentInfo
+        };
+        vkCmdBeginRendering(cb, &renderingInfo);
+
+        VkViewport vp
+        {
+            .width = static_cast<float>(m_glmWindowSize.x),
+            .height = static_cast<float>(m_glmWindowSize.y),
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f
+        };
+        vkCmdSetViewport(cb, 0, 1, &vp);
+        VkRect2D scissor
+        {
+            .extent{
+                .width = static_cast<uint32_t>(m_glmWindowSize.x),
+                .height = static_cast<uint32_t>(m_glmWindowSize.y)
+            }
+        };
+        vkCmdSetScissor(cb, 0, 1, &scissor);
+
+        vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vkPipeline);
+        VkDeviceSize vOffset{ 0 };
+        vkCmdBindDescriptorSets(
+            cb,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_vkPipelineLayout,
+            0,
+            1,
+            &m_vkDescriptorSetTex,
+            0,
+            nullptr
+        );
+        vkCmdBindVertexBuffers(cb, 0, 1, &m_vkBuffer, &vOffset);
+        vkCmdBindIndexBuffer(cb, m_vkBuffer, m_vkBufSize, VK_INDEX_TYPE_UINT16);
+
+        vkCmdPushConstants(
+            cb,
+            m_vkPipelineLayout,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(VkDeviceAddress),
+            &m_shaderDataBuffers[m_frameIndex].deviceAddress
+        );
+
+        vkCmdDrawIndexed(cb, m_vkIndexCount, 3, 0, 0, 0);
+        vkCmdEndRendering(cb);
+
+        VkImageMemoryBarrier2 barrierPresent
+        {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .dstAccessMask = 0,
+            .oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            .image = m_vkSwapchainImages[m_imageIndex],
+            .subresourceRange{
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .levelCount = 1,
+                .layerCount = 1
+            }
+        };
+        VkDependencyInfo barrierPresentDependencyInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .imageMemoryBarrierCount = 1,
+            .pImageMemoryBarriers = &barrierPresent
+        };
+        vkCmdPipelineBarrier2(cb, &barrierPresentDependencyInfo);
+
+        vkEndCommandBuffer(cb);
+        }
+
+        {} // Unknown. Removing these braces means vscode does not recognize the braces below as foldable.
+
+        { /* Submit command buffer. */
+        VkSemaphoreSubmitInfo waitSemaphoreInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = m_vkImageAcquiredSemaphores[m_frameIndex],
+            .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
+        };
+        VkCommandBufferSubmitInfo commandBufferSubmitInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+            .commandBuffer = cb
+        };
+        VkSemaphoreSubmitInfo signalSemaphoreInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = m_vkRenderCompleteSemaphores[m_imageIndex],
+            .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
+        };
+        VkSubmitInfo2 submitInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+            .waitSemaphoreInfoCount = 1,
+            .pWaitSemaphoreInfos = &waitSemaphoreInfo,
+            .commandBufferInfoCount = 1,
+            .pCommandBufferInfos = &commandBufferSubmitInfo,
+            .signalSemaphoreInfoCount = 1,
+            .pSignalSemaphoreInfos = &signalSemaphoreInfo
+        };
+        vkResult = vkQueueSubmit2(m_vkQueue, 1, &submitInfo, m_vkFences[m_frameIndex]);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to submit queue", vkResult);
+
+        m_frameIndex = (m_frameIndex + 1) % m_maxFramesInFlight;
+        }
+
+        { /* Present image. */
+        VkPresentInfoKHR presentInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &m_vkRenderCompleteSemaphores[m_imageIndex],
+            .swapchainCount = 1,
+            .pSwapchains = &m_vkSwapchain,
+            .pImageIndices = &m_imageIndex
+        };
+        vkResult = vkQueuePresentKHR(m_vkQueue, &presentInfo);
+        if (!CheckSwapchain(vkResult))
+        {
+            return false;
+        }
+        }
+        
+        { /* Poll events. */
+        float elapsedTime{ (SDL_GetTicks() - lastTime) / 1000.0f };
+        lastTime = SDL_GetTicks();
+        for (SDL_Event event; SDL_PollEvent(&event);) {
+
+            // Exit loop if the application is about to close
+            if (event.type == SDL_EVENT_QUIT) {
+                quit = true;
+                break;
+            }
+
+            // Rotate the selected object with mouse drag
+            if (event.type == SDL_EVENT_MOUSE_MOTION) {
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    m_objectRotations[m_shaderData.selected].x -= (float)event.motion.yrel * elapsedTime;
+                    m_objectRotations[m_shaderData.selected].y += (float)event.motion.xrel * elapsedTime;
+                }
+            }
+
+            // Zooming with the mouse wheel
+            if (event.type == SDL_EVENT_MOUSE_WHEEL) {
+                m_camPos.z += (float)event.wheel.y * elapsedTime * 10.0f;
+            }
+
+            // Select active model instance
+            if (event.type == SDL_EVENT_KEY_DOWN) {
+                if (event.key.key == SDLK_PLUS || event.key.key == SDLK_KP_PLUS) {
+                    m_shaderData.selected = (m_shaderData.selected < 2) ? m_shaderData.selected + 1 : 0;
+                }
+                if (event.key.key == SDLK_MINUS || event.key.key == SDLK_KP_MINUS) {
+                    m_shaderData.selected = (m_shaderData.selected > 0) ? m_shaderData.selected - 1 : 2;
+                }
+            }
+
+            // Window resize
+            if (event.type == SDL_EVENT_WINDOW_RESIZED) {
+                m_updateSwapchain = true;
+            }
+        }
+        }
+
+        { /* Recreate swapchain. */
+        if (m_updateSwapchain)
+        {
+            m_updateSwapchain = false;
+            vkResult = vkDeviceWaitIdle(m_vkDevice);
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to wait for device idle", vkResult);
+            vkResult = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+                m_vkDevices[m_deviceIndex],
+                m_vkSurface,
+                &m_surfaceCapabilities
+            );
+            m_swapchainCI.oldSwapchain = m_vkSwapchain;
+            m_swapchainCI.imageExtent = {
+                .width = static_cast<uint32_t>(m_glmWindowSize.x),
+                .height = static_cast<uint32_t>(m_glmWindowSize.y)
+            };
+            vkResult = vkCreateSwapchainKHR(m_vkDevice, &m_swapchainCI, nullptr, &m_vkSwapchain);
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to create swapchain", vkResult);
+            for (auto i = 0; i < m_imageCount; i++) {
+                vkDestroyImageView(m_vkDevice, m_vkSwapchainImageViews[i], nullptr);
+            }
+            vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &m_imageCount, nullptr);
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to get swapchain images", vkResult);
+            m_vkSwapchainImages.resize(m_imageCount);
+            vkResult = vkGetSwapchainImagesKHR(
+                m_vkDevice,
+                m_vkSwapchain,
+                &m_imageCount,
+                m_vkSwapchainImages.data()
+            );
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to get swapchain images", vkResult);
+            m_vkSwapchainImageViews.resize(m_imageCount);
+            for (auto i = 0; i < m_imageCount; i++) {
+                VkImageViewCreateInfo viewCI{
+                    .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                    .image = m_vkSwapchainImages[i],
+                    .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                    .format = m_imageFormat,
+                    .subresourceRange = {
+                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                        .levelCount = 1,
+                        .layerCount = 1
+                    }
+                };
+                vkResult = vkCreateImageView(m_vkDevice, &viewCI, nullptr, &m_vkSwapchainImageViews[i]);
+                RETURN_FALSE_ON_FAIL_VULKAN("Failed to create image view", vkResult);
+            }
+            for (auto& semaphore : m_vkRenderCompleteSemaphores) {
+                vkDestroySemaphore(m_vkDevice, semaphore, nullptr);
+            }
+            m_vkRenderCompleteSemaphores.resize(m_imageCount);
+            for (auto& semaphore : m_vkRenderCompleteSemaphores) {
+                vkResult = vkCreateSemaphore(m_vkDevice, &m_semaphoreCI, nullptr, &semaphore);
+                RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphore", vkResult);
+            }   
+            vkDestroySwapchainKHR(m_vkDevice, m_swapchainCI.oldSwapchain, nullptr);
+            vmaDestroyImage(m_vmaAllocator, m_vkDepthImage, m_vmaDepthImageAllocation);
+            vkDestroyImageView(m_vkDevice, m_vkDepthImageView, nullptr);
+            m_depthImageCI.extent = {
+                .width = static_cast<uint32_t>(m_glmWindowSize.x),
+                .height = static_cast<uint32_t>(m_glmWindowSize.y),
+                .depth = 1
+            };
+            VmaAllocationCreateInfo allocCI{
+                .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+                .usage = VMA_MEMORY_USAGE_AUTO
+            };
+            vkResult = vmaCreateImage(
+                m_vmaAllocator,
+                &m_depthImageCI,
+                &allocCI,
+                &m_vkDepthImage,
+                &m_vmaDepthImageAllocation,
+                nullptr
+            );
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to create image", vkResult);
+            VkImageViewCreateInfo viewCI{
+                .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                .image = m_vkDepthImage,
+                .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                .format = m_depthFormat,
+                .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1 }
+            };
+            vkResult = vkCreateImageView(m_vkDevice, &viewCI, nullptr, &m_vkDepthImageView);
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to create image view", vkResult);
+        }
+        }
+    }
+
+    return true;
+}
+
+bool SpaceInvadersGame::CheckSwapchain(VkResult result)
+{
+    if (result >= VK_SUCCESS)
+    {
+        return true;
+    }
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        m_updateSwapchain = true;
+        return true;
+    }
+
+    std::cerr << "Vulkan swapchain call failed. Error " << result << "\n";
+    return false;
 }
 
 bool SpaceInvadersGame::Cleanup()
