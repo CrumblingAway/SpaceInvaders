@@ -58,6 +58,11 @@ bool SpaceInvadersGame::InitSDL()
         PRINT_SDL_CRITICAL_ERROR("Failed to initialize");
         return false;
     }
+    if (SDL_Vulkan_LoadLibrary(NULL) < 0)
+    {
+        PRINT_SDL_CRITICAL_ERROR("Failed to load Vulkan library");
+        return false;
+    }
 
     m_sdlWindow = SDL_CreateWindow(
         m_pApplicationName,
