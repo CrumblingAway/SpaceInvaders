@@ -11,7 +11,7 @@
 #include <slang/slang-com-ptr.h>
 #include <volk/volk.h>
 
-#include "vk_mem_alloc.h"
+#include <vma/vk_mem_alloc.h>
 
 // Forward declarations.
 class SDL_Window;
