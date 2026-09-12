@@ -11,3 +11,5 @@ target_link_libraries(${PROJECT_NAME}
 	/usr/local/lib/libktx.so	
 	/usr/local/lib/libslang.so
 )
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE VK_NO_PROTOTYPES)
