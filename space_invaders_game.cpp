@@ -77,6 +77,8 @@ bool SpaceInvadersGame::InitSDL()
 bool SpaceInvadersGame::CleanupSDL()
 {
     SDL_DestroyWindow(m_sdlWindow);
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+    SDL_Quit();
 
     return true;
 }
@@ -737,7 +739,6 @@ bool SpaceInvadersGame::InitVulkan()
 
     {} // Unknown. Removing these braces means vscode does not recognize the braces below as foldable.
 
-    VkShaderModule shaderModule{};
     { /* Shaders. */
     slang::createGlobalSession(m_slangGlobalSession.writeRef());
     auto slangTargets{ std::to_array<slang::TargetDesc>({ {
@@ -772,7 +773,7 @@ bool SpaceInvadersGame::InitVulkan()
         .codeSize = spirv->getBufferSize(),
         .pCode = (uint32_t*)spirv->getBufferPointer()
     };
-    vkResult = vkCreateShaderModule(m_vkDevice, &shaderModuleCI, nullptr, &shaderModule);
+    vkResult = vkCreateShaderModule(m_vkDevice, &shaderModuleCI, nullptr, &m_vkShaderModule);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create shader module", vkResult);
     }
 
@@ -826,13 +827,13 @@ bool SpaceInvadersGame::InitVulkan()
         {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_VERTEX_BIT,
-            .module = shaderModule,
+            .module = m_vkShaderModule,
             .pName = "main"
         },
         {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .module = shaderModule,
+            .module = m_vkShaderModule,
             .pName = "main"
         }
     };
@@ -919,6 +920,49 @@ bool SpaceInvadersGame::InitVulkan()
 
 bool SpaceInvadersGame::CleanupVulkan()
 {
+    VkResult vkResult = vkDeviceWaitIdle(m_vkDevice);
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to wait for device idle", vkResult);
+
+    for (auto i = 0; i < m_maxFramesInFlight; ++i)
+    {
+        vkDestroyFence(m_vkDevice, m_vkFences[i], nullptr);
+        vkDestroySemaphore(m_vkDevice, m_vkImageAcquiredSemaphores[i], nullptr);
+        vmaDestroyBuffer(
+            m_vmaAllocator,
+            m_shaderDataBuffers[i].buffer,
+            m_shaderDataBuffers[i].allocation
+        );
+    }
+    
+    for (auto i = 0; i < m_vkRenderCompleteSemaphores.size(); ++i)
+    {
+        vkDestroySemaphore(m_vkDevice, m_vkRenderCompleteSemaphores[i], nullptr);
+    }
+
+    vmaDestroyImage(m_vmaAllocator, m_vkDepthImage, m_vmaDepthImageAllocation);
+    vkDestroyImageView(m_vkDevice, m_vkDepthImageView, nullptr);
+    for (auto i = 0; i < m_vkSwapchainImageViews.size(); ++i)
+    {
+        vkDestroyImageView(m_vkDevice, m_vkSwapchainImageViews[i], nullptr);
+    }
+    vmaDestroyBuffer(m_vmaAllocator, m_vkBuffer, m_vmaBufferAllocation);
+    for (auto i = 0; i < m_textures.size(); ++i){
+        vkDestroyImageView(m_vkDevice, m_textures[i].view, nullptr);
+        vkDestroySampler(m_vkDevice, m_textures[i].sampler, nullptr);
+        vmaDestroyImage(m_vmaAllocator, m_textures[i].image, m_textures[i].allocation);
+    }
+    vkDestroyDescriptorSetLayout(m_vkDevice, m_vkDescriptorSetLayoutTex, nullptr);
+    vkDestroyDescriptorPool(m_vkDevice, m_vkDescriptorPool, nullptr);
+    vkDestroyPipelineLayout(m_vkDevice, m_vkPipelineLayout, nullptr);
+    vkDestroyPipeline(m_vkDevice, m_vkPipeline, nullptr);
+    vkDestroySwapchainKHR(m_vkDevice, m_vkSwapchain, nullptr);
+    vkDestroySurfaceKHR(m_vkInstance, m_vkSurface, nullptr);
+    vkDestroyCommandPool(m_vkDevice, m_vkCommandPool, nullptr);
+    vkDestroyShaderModule(m_vkDevice, m_vkShaderModule, nullptr);
+    vmaDestroyAllocator(m_vmaAllocator);
+    vkDestroyDevice(m_vkDevice, nullptr);
+    vkDestroyInstance(m_vkInstance, nullptr);
+    
     return true;
 }
 

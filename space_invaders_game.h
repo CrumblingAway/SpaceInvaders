@@ -150,6 +150,7 @@ private:
     uint32_t m_frameIndex{ 0 };
 
     bool m_updateSwapchain{ false };
+    VkShaderModule m_vkShaderModule{};
     ShaderData m_shaderData;
     bool CheckSwapchain(VkResult result);
 
