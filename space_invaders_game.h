@@ -3,6 +3,9 @@
 #include <cstddef>
 #include <vector>
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
 #include <glm/glm.hpp>
 #include <slang/slang.h>
 #include <slang/slang-com-ptr.h>
