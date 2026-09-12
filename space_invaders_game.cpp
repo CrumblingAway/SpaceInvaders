@@ -48,11 +48,11 @@ struct ShaderData
     uint32_t selected{ 1 };
 };
 
-void SpaceInvadersGame::Run()
+bool SpaceInvadersGame::Run()
 {
-    Init();
-    MainLoop();
-    Cleanup();
+    return Init()
+           && MainLoop()
+           && Cleanup();
 }
 
 const char *SpaceInvadersGame::GetName() const
@@ -60,16 +60,10 @@ const char *SpaceInvadersGame::GetName() const
     return m_pApplicationName;
 }
 
-void SpaceInvadersGame::Init()
+bool SpaceInvadersGame::Init()
 {
-    if (!InitSDL())
-    {
-
-    }
-    if (!InitVulkan())
-    {
-
-    }
+    return InitSDL()
+           && InitVulkan();
 }
 
 bool SpaceInvadersGame::InitSDL()
@@ -95,9 +89,11 @@ bool SpaceInvadersGame::InitSDL()
     return true;
 }
 
-void SpaceInvadersGame::CleanupSDL()
+bool SpaceInvadersGame::CleanupSDL()
 {
     SDL_DestroyWindow(m_sdlWindow);
+
+    return true;
 }
 
 bool SpaceInvadersGame::InitVulkan()
@@ -949,18 +945,18 @@ bool SpaceInvadersGame::InitVulkan()
     return true;
 }
 
-void SpaceInvadersGame::CleanupVulkan()
+bool SpaceInvadersGame::CleanupVulkan()
+{
+    return true;
+}
+
+bool SpaceInvadersGame::MainLoop()
 {
 
 }
 
-void SpaceInvadersGame::MainLoop()
+bool SpaceInvadersGame::Cleanup()
 {
-
-}
-
-void SpaceInvadersGame::Cleanup()
-{
-    CleanupVulkan();
-    CleanupSDL();
+    return CleanupVulkan()
+           && CleanupSDL();
 }

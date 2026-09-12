@@ -24,7 +24,7 @@ public:
      * Run the Space Invaders game. Calling this method hands off the application into the hands of
      * this class.
      */
-    void Run();
+    bool Run();
 
     /**
      * Get the name of this application. This name is provided internally to the windowing system
@@ -43,8 +43,8 @@ private:
      * As without any of the dependencies this application has no purpose, failure of this method
      * results in immediate termination of the application.
      */
-    void Init();
-    void Cleanup();
+    bool Init();
+    bool Cleanup();
 
     /**
      * Init SDL.
@@ -53,7 +53,7 @@ private:
      * in immediate termination of the application.
      */
     bool InitSDL();
-    void CleanupSDL();
+    bool CleanupSDL();
 
     /**
      * Init Vulkan.
@@ -62,12 +62,12 @@ private:
      * immediate termination of the application.
      */
     bool InitVulkan();
-    void CleanupVulkan();
+    bool CleanupVulkan();
 
     /**
      * This game's main loop. All rendering and game logic is handled in this method.
      */
-    void MainLoop();
+    bool MainLoop();
 
     const size_t m_windowHeight = 600;
     const size_t m_windowWidth = 800;
