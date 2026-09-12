@@ -9,7 +9,7 @@
 #include <glm/glm.hpp>
 #include <slang/slang.h>
 #include <slang/slang-com-ptr.h>
-#include <vulkan/vulkan.h>
+#include <volk/volk.h>
 
 #include "vk_mem_alloc.h"
 

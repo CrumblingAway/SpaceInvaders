@@ -87,6 +87,9 @@ bool SpaceInvadersGame::InitVulkan()
 {
     VkResult vkResult;
 
+    vkResult = volkInitialize();
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to initialize Volk", vkResult);
+
     { /* Instance. */
     VkApplicationInfo appInfo
     {
@@ -108,6 +111,7 @@ bool SpaceInvadersGame::InitVulkan()
 
     vkResult = vkCreateInstance(&instanceCI, nullptr, &m_vkInstance); 
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to init instance", vkResult);
+    volkLoadInstance(m_vkInstance);
     }
 
     { /* Physical device. */
