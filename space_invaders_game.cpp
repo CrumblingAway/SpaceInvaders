@@ -115,7 +115,6 @@ bool SpaceInvadersGame::InitVulkan()
     }
 
     { /* Physical device. */
-    #pragma region Select physical device.
     uint32_t deviceCount{ 0 };
     vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, nullptr);
     m_vkDevices.resize(deviceCount);
@@ -127,7 +126,6 @@ bool SpaceInvadersGame::InitVulkan()
     };
     vkGetPhysicalDeviceProperties2(m_vkDevices[m_deviceIndex], &deviceProperties);
     std::cout << "Selected device: " << deviceProperties.properties.deviceName <<  "\n";
-    #pragma endregion Select physical device.
     }
 
     uint32_t queueFamily{ 0 };
