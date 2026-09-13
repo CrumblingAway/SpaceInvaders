@@ -685,75 +685,74 @@ bool SpaceInvadersGame::InitVulkan()
             .sampler = m_textures[i].sampler,
             .imageView = m_textures[i].view,
             .imageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL
-        });
-        
-        VkDescriptorBindingFlags descVariableFlag{ VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT };
-        VkDescriptorSetLayoutBindingFlagsCreateInfo descBindingFlags
-        {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
-            .bindingCount = 1,
-            .pBindingFlags = &descVariableFlag
-        };
-        VkDescriptorSetLayoutBinding descLayoutBindingTex
-        {
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = static_cast<uint32_t>(m_textures.size()),
-            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-        };
-        VkDescriptorSetLayoutCreateInfo descLayoutTexCI
-        {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-            .pNext = &descBindingFlags,
-            .bindingCount = 1,
-            .pBindings = &descLayoutBindingTex
-        };
-        vkResult = vkCreateDescriptorSetLayout(m_vkDevice, &descLayoutTexCI, nullptr, &m_vkDescriptorSetLayoutTex);
-        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create descriptor set", vkResult);
-
-        VkDescriptorPoolSize poolSize
-        {
-            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = static_cast<uint32_t>(m_textures.size())
-        };
-        VkDescriptorPoolCreateInfo descPoolCI
-        {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-            .maxSets = 1,
-            .poolSizeCount = 1,
-            .pPoolSizes = &poolSize
-        };
-        vkResult = vkCreateDescriptorPool(m_vkDevice, &descPoolCI, nullptr, &m_vkDescriptorPool);
-        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create descriptor pool", vkResult);
-
-        uint32_t variableDescCount{ static_cast<uint32_t>(m_textures.size()) };
-        VkDescriptorSetVariableDescriptorCountAllocateInfo variableDescCountAI
-        {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT,
-            .descriptorSetCount = 1,
-            .pDescriptorCounts = &variableDescCount
-        };
-        VkDescriptorSetAllocateInfo texDescSetAlloc
-        {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .pNext = &variableDescCountAI,
-            .descriptorPool = m_vkDescriptorPool,
-            .descriptorSetCount = 1,
-            .pSetLayouts = &m_vkDescriptorSetLayoutTex
-        };
-        vkResult = vkAllocateDescriptorSets(m_vkDevice, &texDescSetAlloc, &m_vkDescriptorSetTex);
-        RETURN_FALSE_ON_FAIL_VULKAN("Failed to allocate descriptor sets", vkResult);
-
-        VkWriteDescriptorSet writeDescSet
-        {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = m_vkDescriptorSetTex,
-            .dstBinding = 0,
-            .descriptorCount = static_cast<uint32_t>(textureDescriptors.size()),
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = textureDescriptors.data()
-        };
-        vkUpdateDescriptorSets(m_vkDevice, 1, &writeDescSet, 0, nullptr);
+        }); 
     }
+    VkDescriptorBindingFlags descVariableFlag{ VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT };
+    VkDescriptorSetLayoutBindingFlagsCreateInfo descBindingFlags
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+        .bindingCount = 1,
+        .pBindingFlags = &descVariableFlag
+    };
+    VkDescriptorSetLayoutBinding descLayoutBindingTex
+    {
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = static_cast<uint32_t>(m_textures.size()),
+        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+    };
+    VkDescriptorSetLayoutCreateInfo descLayoutTexCI
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = &descBindingFlags,
+        .bindingCount = 1,
+        .pBindings = &descLayoutBindingTex
+    };
+    vkResult = vkCreateDescriptorSetLayout(m_vkDevice, &descLayoutTexCI, nullptr, &m_vkDescriptorSetLayoutTex);
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create descriptor set", vkResult);
+
+    VkDescriptorPoolSize poolSize
+    {
+        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = static_cast<uint32_t>(m_textures.size())
+    };
+    VkDescriptorPoolCreateInfo descPoolCI
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .maxSets = 1,
+        .poolSizeCount = 1,
+        .pPoolSizes = &poolSize
+    };
+    vkResult = vkCreateDescriptorPool(m_vkDevice, &descPoolCI, nullptr, &m_vkDescriptorPool);
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create descriptor pool", vkResult);
+
+    uint32_t variableDescCount{ static_cast<uint32_t>(m_textures.size()) };
+    VkDescriptorSetVariableDescriptorCountAllocateInfo variableDescCountAI
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT,
+        .descriptorSetCount = 1,
+        .pDescriptorCounts = &variableDescCount
+    };
+    VkDescriptorSetAllocateInfo texDescSetAlloc
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .pNext = &variableDescCountAI,
+        .descriptorPool = m_vkDescriptorPool,
+        .descriptorSetCount = 1,
+        .pSetLayouts = &m_vkDescriptorSetLayoutTex
+    };
+    vkResult = vkAllocateDescriptorSets(m_vkDevice, &texDescSetAlloc, &m_vkDescriptorSetTex);
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to allocate descriptor sets", vkResult);
+
+    VkWriteDescriptorSet writeDescSet
+    {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = m_vkDescriptorSetTex,
+        .dstBinding = 0,
+        .descriptorCount = static_cast<uint32_t>(textureDescriptors.size()),
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .pImageInfo = textureDescriptors.data()
+    };
+    vkUpdateDescriptorSets(m_vkDevice, 1, &writeDescSet, 0, nullptr);
     }
 
     {} // Unknown. Removing these braces means vscode does not recognize the braces below as foldable.
