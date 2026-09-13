@@ -270,6 +270,23 @@ bool SpaceInvadersGame::InitVulkan()
     vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &m_imageCount, m_vkSwapchainImages.data());
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to get swapchain images", vkResult);
     m_vkSwapchainImageViews.resize(m_imageCount);
+    for (auto i = 0; i < m_imageCount; ++i)
+    {
+        VkImageViewCreateInfo viewCI
+        {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = m_vkSwapchainImages[i],
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = m_imageFormat,
+            .subresourceRange{
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .levelCount = 1,
+                .layerCount = 1
+            }
+        };
+        vkResult = vkCreateImageView(m_vkDevice, &viewCI, nullptr, &m_vkSwapchainImageViews[i]);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create image view", vkResult);
+    }
     }
 
     { /* Depth attachment. */
