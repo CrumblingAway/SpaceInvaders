@@ -672,6 +672,9 @@ bool SpaceInvadersGame::InitVulkan()
         vkResult = vkWaitForFences(m_vkDevice, 1, &fenceOneTime, VK_TRUE, UINT64_MAX);
         RETURN_FALSE_ON_FAIL_VULKAN("Failed to wait for OneTime fence", vkResult);
 
+        vkDestroyFence(m_vkDevice, fenceOneTime, nullptr);
+        vmaDestroyBuffer(m_vmaAllocator, imgSrcBuffer, imgSrcAllocation);
+
         VkSamplerCreateInfo samplerCI
         {
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
