@@ -360,7 +360,7 @@ bool SpaceInvadersGame::InitVulkan()
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &tinyobj_warn, &tinyobj_error, "../assets/suzanne.obj"))
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &tinyobj_warn, &tinyobj_error, "assets/suzanne.obj"))
     {
         PRINT_TINYOBJ_CRITICAL_ERROR("Failed to load meshes", tinyobj_warn, tinyobj_error);
         return false;
@@ -489,7 +489,7 @@ bool SpaceInvadersGame::InitVulkan()
     for (auto i = 0; i < m_textures.size(); ++i)
     {
         ktxTexture* _ktxTexture{ nullptr };
-        std::string filename = "../assets/suzanne" + std::to_string(i) + ".ktx";
+        std::string filename = "assets/suzanne" + std::to_string(i) + ".ktx";
         ktxTexture_CreateFromNamedFile(filename.c_str(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &_ktxTexture);
 
         VkImageCreateInfo texImgCI
@@ -786,7 +786,7 @@ bool SpaceInvadersGame::InitVulkan()
 
     Slang::ComPtr<slang::IModule> slangModule
     {
-        slangSession->loadModuleFromSource("triangle", "../assets/shader.slang", nullptr, nullptr)
+        slangSession->loadModuleFromSource("triangle", "assets/shader.slang", nullptr, nullptr)
     };
     Slang::ComPtr<ISlangBlob> spirv;
     slangModule->getTargetCode(0, spirv.writeRef());
