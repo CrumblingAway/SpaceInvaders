@@ -89,8 +89,8 @@ private:
      */
     bool MainLoop();
 
-    const size_t m_windowHeight = 600;
-    const size_t m_windowWidth = 800;
+    const size_t m_windowHeight = 720u;
+    const size_t m_windowWidth = 1280u;
     SDL_Window* m_sdlWindow = nullptr;
 
     VkInstance m_vkInstance{ VK_NULL_HANDLE };
