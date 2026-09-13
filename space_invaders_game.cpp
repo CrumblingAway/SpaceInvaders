@@ -446,12 +446,13 @@ bool SpaceInvadersGame::InitVulkan()
         RETURN_FALSE_ON_FAIL_VULKAN("Failed to create fences", vkResult);
         vkResult = vkCreateSemaphore(m_vkDevice, &m_semaphoreCI, nullptr, &m_vkImageAcquiredSemaphores[i]);
         RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphores", vkResult);
-        m_vkRenderCompleteSemaphores.resize(m_vkSwapchainImages.size());
-        for (auto& semaphore : m_vkRenderCompleteSemaphores)
-        {
-            vkResult = vkCreateSemaphore(m_vkDevice, &m_semaphoreCI, nullptr, &semaphore);
-            RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphore", vkResult);
-        }
+        
+    }
+    m_vkRenderCompleteSemaphores.resize(m_vkSwapchainImages.size());
+    for (auto& semaphore : m_vkRenderCompleteSemaphores)
+    {
+        vkResult = vkCreateSemaphore(m_vkDevice, &m_semaphoreCI, nullptr, &semaphore);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphore", vkResult);
     }
     }
 
