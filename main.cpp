@@ -2,7 +2,7 @@
 
 int main()
 {
-    SpaceInvadersGame spaceInvadersGame;
+    SpaceInadersRenderer spaceInvadersGame;
     spaceInvadersGame.Run();
 
     return 0;

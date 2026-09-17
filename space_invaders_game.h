@@ -37,7 +37,7 @@ struct ShaderDataBuffer
  * A Space Invaders clone. Only the `Run()` method is designed to be called from the outside. The
  * rest of the class is entirely internally managed.
  */
-class SpaceInvadersGame
+class SpaceInadersRenderer
 {
 public:
     /**

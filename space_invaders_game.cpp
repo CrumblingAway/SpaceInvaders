@@ -33,25 +33,25 @@ struct Vertex
     glm::vec2 uv;
 };
 
-bool SpaceInvadersGame::Run()
+bool SpaceInadersRenderer::Run()
 {
     return Init()
            && MainLoop()
            && Cleanup();
 }
 
-const char *SpaceInvadersGame::GetName() const
+const char *SpaceInadersRenderer::GetName() const
 {
     return m_pApplicationName;
 }
 
-bool SpaceInvadersGame::Init()
+bool SpaceInadersRenderer::Init()
 {
     return InitSDL()
            && InitVulkan();
 }
 
-bool SpaceInvadersGame::InitSDL()
+bool SpaceInadersRenderer::InitSDL()
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
@@ -79,7 +79,7 @@ bool SpaceInvadersGame::InitSDL()
     return true;
 }
 
-bool SpaceInvadersGame::InitVulkan()
+bool SpaceInadersRenderer::InitVulkan()
 {
     VkResult vkResult;
 
@@ -936,7 +936,7 @@ bool SpaceInvadersGame::InitVulkan()
     return true;
 }
 
-bool SpaceInvadersGame::MainLoop()
+bool SpaceInadersRenderer::MainLoop()
 {
     uint64_t lastTime{ SDL_GetTicks() };
     bool quit{ false };
@@ -1333,7 +1333,7 @@ bool SpaceInvadersGame::MainLoop()
     return true;
 }
 
-bool SpaceInvadersGame::CleanupVulkan()
+bool SpaceInadersRenderer::CleanupVulkan()
 {
     VkResult vkResult = vkDeviceWaitIdle(m_vkDevice);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to wait for device idle", vkResult);
@@ -1381,7 +1381,7 @@ bool SpaceInvadersGame::CleanupVulkan()
     return true;
 }
 
-bool SpaceInvadersGame::CleanupSDL()
+bool SpaceInadersRenderer::CleanupSDL()
 {
     SDL_DestroyWindow(m_sdlWindow);
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
@@ -1390,7 +1390,7 @@ bool SpaceInvadersGame::CleanupSDL()
     return true;
 }
 
-bool SpaceInvadersGame::CheckSwapchain(VkResult result)
+bool SpaceInadersRenderer::CheckSwapchain(VkResult result)
 {
     if (result >= VK_SUCCESS)
     {
@@ -1407,7 +1407,7 @@ bool SpaceInvadersGame::CheckSwapchain(VkResult result)
     return false;
 }
 
-bool SpaceInvadersGame::Cleanup()
+bool SpaceInadersRenderer::Cleanup()
 {
     return CleanupVulkan()
            && CleanupSDL();
