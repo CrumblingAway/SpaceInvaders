@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 23)
 project(space_invaders)
 
 add_executable(${PROJECT_NAME}
-	space_invaders_game.cpp
+	space_invaders_renderer.cpp
 	main.cpp
 	vma_usage.cpp
 	tiny_obj_usage.cpp

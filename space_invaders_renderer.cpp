@@ -1,4 +1,4 @@
-#include "space_invaders_game.h"
+#include "space_invaders_renderer.h"
 
 #include "tiny_obj_loader.h"
 
