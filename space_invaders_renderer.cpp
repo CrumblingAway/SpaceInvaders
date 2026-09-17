@@ -978,7 +978,7 @@ bool SpaceInadersRenderer::MainLoop()
         m_shaderData.view = glm::translate(glm::mat4(1.0f), m_camPos);
         for (auto i = 0; i < 3; ++i)
         {
-            auto instancePos = glm::vec3((float)(i - 1) * 3.0f, 0.0f, 0.0f);
+            auto instancePos = glm::vec3((float)(i - 1) * 3.0f, 0.0f, 0.0f) + m_objectPositionOffsets[i];
             m_shaderData.model[i] = glm::translate(glm::mat4(1.0f), instancePos)
                                     * glm::mat4_cast(glm::quat(m_objectRotations[i]));
         }
@@ -1231,6 +1231,24 @@ bool SpaceInadersRenderer::MainLoop()
                 }
                 if (event.key.key == SDLK_MINUS || event.key.key == SDLK_KP_MINUS) {
                     m_shaderData.selected = (m_shaderData.selected > 0) ? m_shaderData.selected - 1 : 2;
+                }
+                constexpr float moveDelta = 0.5f;
+                switch (event.key.key)
+                {
+                    case SDLK_LEFT:
+                        m_objectPositionOffsets[m_shaderData.selected] += glm::vec3(-moveDelta, 0.0f, 0.0f);
+                        break;
+                    case SDLK_RIGHT:
+                        m_objectPositionOffsets[m_shaderData.selected] += glm::vec3(moveDelta, 0.0f, 0.0f);
+                        break;
+                    case SDLK_UP:
+                        m_objectPositionOffsets[m_shaderData.selected] += glm::vec3(0.0f, -moveDelta, 0.0f);
+                        break;
+                    case SDLK_DOWN:
+                        m_objectPositionOffsets[m_shaderData.selected] += glm::vec3(0.0f, moveDelta, 0.0f);
+                        break;
+                    default:
+                        break;
                 }
             }
 

@@ -159,6 +159,11 @@ private:
 
     glm::vec3 m_camPos{ 0.0f, 0.0f, -6.0f };
     glm::vec3 m_objectRotations[3]{};
+    glm::vec3 m_objectPositionOffsets[3]{
+        { 0.0f, 0.0f, 0.0f },
+        { 0.0f, 0.0f, 0.0f },
+        { 0.0f, 0.0f, 0.0f }
+    };
 
     std::array<ShaderDataBuffer, m_maxFramesInFlight> m_shaderDataBuffers;
     std::array<VkCommandBuffer, m_maxFramesInFlight> m_commandBuffers;
