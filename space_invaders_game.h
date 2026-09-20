@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <volk/volk.h>
 
 class SDL_Window;
 
@@ -51,6 +52,15 @@ private:
     bool CleanupSDL();
 
     /**
+     * Init Vulkan.
+     * 
+     * As this is the only graphics API this game accounts for, failure  of this method results in
+     * immediate termination of the application.
+     */
+    bool InitVulkan();
+    bool CleanupVulkan();
+
+    /**
      * Clean up the resources associated with this instance of the game.
      */
     bool Destroy();
@@ -60,6 +70,8 @@ private:
     const size_t m_windowHeight = 720u;
     const size_t m_windowWidth = 1280u;
     SDL_Window* m_sdlWindow = nullptr;
+
+    VkInstance m_vkInstance{ VK_NULL_HANDLE };
 
     PlayerSpaceship m_playerSpaceship;
 };
