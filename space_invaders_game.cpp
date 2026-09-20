@@ -267,6 +267,7 @@ bool SpaceInvadersGame::InitVulkan()
     }
 
     { /* Depth attachment. */
+    VkFormat depthFormat { VK_FORMAT_UNDEFINED };
     std::vector<VkFormat> depthFormatList{
         VK_FORMAT_D32_SFLOAT_S8_UINT,
         VK_FORMAT_D24_UNORM_S8_UINT
@@ -274,22 +275,22 @@ bool SpaceInvadersGame::InitVulkan()
     for (VkFormat& format : depthFormatList)
     {
         VkFormatProperties2 formatProperties{ .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
-        vkGetPhysicalDeviceFormatProperties2(vkPhysicalDevices[physicalDeviceIndex], format, &formatProperties);
+        vkGetPhysicalDeviceFormatProperties2(m_vkPhysicalDevice, format, &formatProperties);
         if (formatProperties.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {
-            m_depthFormat = format;
+            depthFormat = format;
             break;
         }
     }
 
-    m_depthImageCI =
+    VkImageCreateInfo depthImageCI
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
-        .format = m_depthFormat,
+        .format = depthFormat,
         .extent{
-            .width = static_cast<uint32_t>(m_glmWindowSize.x),
-            .height = static_cast<uint32_t>(m_glmWindowSize.y),
+            .width = static_cast<uint32_t>(m_windowWidth),
+            .height = static_cast<uint32_t>(m_windowHeight),
             .depth = 1
         },
         .mipLevels = 1,
@@ -307,7 +308,7 @@ bool SpaceInvadersGame::InitVulkan()
     };
     vkResult = vmaCreateImage(
         m_vmaAllocator,
-        &m_depthImageCI,
+        &depthImageCI,
         &allocationCI,
         &m_vkDepthImage,
         &m_vmaDepthImageAllocation,
@@ -320,7 +321,7 @@ bool SpaceInvadersGame::InitVulkan()
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = m_vkDepthImage,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = m_depthFormat,
+        .format = depthFormat,
         .subresourceRange{
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
             .levelCount = 1,
@@ -872,7 +873,7 @@ bool SpaceInvadersGame::InitVulkan()
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = 1,
         .pColorAttachmentFormats = &imageFormat,
-        .depthAttachmentFormat = m_depthFormat
+        .depthAttachmentFormat = depthFormat
     };
 
     VkPipelineColorBlendAttachmentState blendAttachment{

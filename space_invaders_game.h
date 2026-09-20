@@ -81,9 +81,12 @@ private:
     VkSwapchainKHR m_vkSwapchain{ VK_NULL_HANDLE };
     std::vector<VkImage> m_vkSwapchainImages;
     std::vector<VkImageView> m_vkSwapchainImageViews;
+    VkImage m_vkDepthImage{ VK_NULL_HANDLE };
+    VkImageView m_vkDepthImageView{ VK_NULL_HANDLE };
     const uint32_t m_maxFramesInFlight{ 2 };
 
     VmaAllocator m_vmaAllocator{ VK_NULL_HANDLE };
+    VmaAllocation m_vmaDepthImageAllocation{ VK_NULL_HANDLE };
 
     PlayerSpaceship m_playerSpaceship;
 };
