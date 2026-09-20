@@ -217,17 +217,18 @@ bool SpaceInvadersGame::InitVulkan()
     if (m_surfaceCapabilities.currentExtent.width == 0xFFFFFFFF)
     {
         swapchainExtent = {
-            .width = static_cast<uint32_t>(m_glmWindowSize.x),
-            .height = static_cast<uint32_t>(m_glmWindowSize.y),
+            .width = static_cast<uint32_t>(m_windowWidth),
+            .height = static_cast<uint32_t>(m_windowHeight),
         };
     }
 
-    m_swapchainCI = 
+    const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
+    VkSwapchainCreateInfoKHR swapchainCI = 
     {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = m_vkSurface,
         .minImageCount = m_surfaceCapabilities.minImageCount,
-        .imageFormat = m_imageFormat,
+        .imageFormat = imageFormat,
         .imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR,
         .imageExtent{ .width = swapchainExtent.width, .height = swapchainExtent.height },
         .imageArrayLayers = 1,
@@ -236,23 +237,24 @@ bool SpaceInvadersGame::InitVulkan()
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         .presentMode = VK_PRESENT_MODE_FIFO_KHR
     };
-    vkResult = vkCreateSwapchainKHR(m_vkDevice, &m_swapchainCI, nullptr, &m_vkSwapchain);
+    vkResult = vkCreateSwapchainKHR(m_vkDevice, &swapchainCI, nullptr, &m_vkSwapchain);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create swapchain", vkResult);
 
-    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &m_imageCount, nullptr);
+    uint32_t imageCount{ 0 };
+    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, imageCount, nullptr);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to get swapchain images", vkResult);
-    m_vkSwapchainImages.resize(m_imageCount);
-    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &m_imageCount, m_vkSwapchainImages.data());
+    m_vkSwapchainImages.resize(imageCount);
+    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &imageCount, m_vkSwapchainImages.data());
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to get swapchain images", vkResult);
-    m_vkSwapchainImageViews.resize(m_imageCount);
-    for (auto i = 0; i < m_imageCount; ++i)
+    m_vkSwapchainImageViews.resize(imageCount);
+    for (auto i = 0; i < imageCount; ++i)
     {
         VkImageViewCreateInfo viewCI
         {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = m_vkSwapchainImages[i],
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = m_imageFormat,
+            .format = imageFormat,
             .subresourceRange{
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .levelCount = 1,
@@ -869,7 +871,7 @@ bool SpaceInvadersGame::InitVulkan()
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = 1,
-        .pColorAttachmentFormats = &m_imageFormat,
+        .pColorAttachmentFormats = &imageFormat,
         .depthAttachmentFormat = m_depthFormat
     };
 
