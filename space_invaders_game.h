@@ -81,6 +81,7 @@ private:
     VkSwapchainKHR m_vkSwapchain{ VK_NULL_HANDLE };
     std::vector<VkImage> m_vkSwapchainImages;
     std::vector<VkImageView> m_vkSwapchainImageViews;
+    const uint32_t m_maxFramesInFlight{ 2 };
 
     VmaAllocator m_vmaAllocator{ VK_NULL_HANDLE };
 
