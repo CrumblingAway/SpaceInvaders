@@ -112,11 +112,10 @@ bool SpaceInvadersGame::InitVulkan()
 
     uint32_t queueFamily{ 0 };
     { /* Queue family. */
-    #pragma region Get queue family info.
     uint32_t queueFamilyCount{ 0 };
-    vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevices[physicalDeviceIndex], &queueFamilyCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(m_vkPhysicalDevice, &queueFamilyCount, nullptr);
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevices[physicalDeviceIndex], &queueFamilyCount, queueFamilies.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(m_vkPhysicalDevice, &queueFamilyCount, queueFamilies.data());
     for (size_t i = 0; i < queueFamilies.size(); ++i)
     {
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
@@ -125,7 +124,7 @@ bool SpaceInvadersGame::InitVulkan()
             break;
         }
     }
-    if (!SDL_Vulkan_GetPresentationSupport(m_vkInstance, vkPhysicalDevices[physicalDeviceIndex], queueFamily))
+    if (!SDL_Vulkan_GetPresentationSupport(m_vkInstance, m_vkPhysicalDevice, queueFamily))
     {
         PRINT_SDL_CRITICAL_ERROR("Presentation not supported with provided Vulkan physical device and"
         " queue family");
@@ -175,7 +174,7 @@ bool SpaceInvadersGame::InitVulkan()
         .ppEnabledExtensionNames = deviceExtensions.data(),
         .pEnabledFeatures = &enabledVk10Features
     };
-    vkResult = vkCreateDevice(vkPhysicalDevices[physicalDeviceIndex], &deviceCI, nullptr, &m_vkDevice);
+    vkResult = vkCreateDevice(m_vkPhysicalDevice, &deviceCI, nullptr, &m_vkDevice);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create device handle", vkResult);
     vkGetDeviceQueue(m_vkDevice, queueFamily, 0, &m_vkQueue);
     }

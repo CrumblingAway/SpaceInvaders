@@ -74,6 +74,7 @@ private:
     VkInstance m_vkInstance{ VK_NULL_HANDLE };
     VkPhysicalDevice m_vkPhysicalDevice{ VK_NULL_HANDLE };
     VkDevice m_vkDevice{ VK_NULL_HANDLE };
+    VkQueue m_vkQueue{ VK_NULL_HANDLE };
 
     PlayerSpaceship m_playerSpaceship;
 };
