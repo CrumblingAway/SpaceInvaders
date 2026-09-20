@@ -267,124 +267,124 @@ bool SpaceInvadersGame::InitVulkan()
     }
 
     { /* Depth attachment. */
-    std::vector<VkFormat> depthFormatList{
-        VK_FORMAT_D32_SFLOAT_S8_UINT,
-        VK_FORMAT_D24_UNORM_S8_UINT
-    };
-    for (VkFormat& format : depthFormatList)
-    {
-        VkFormatProperties2 formatProperties{ .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
-        vkGetPhysicalDeviceFormatProperties2(vkPhysicalDevices[physicalDeviceIndex], format, &formatProperties);
-        if (formatProperties.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
-        {
-            m_depthFormat = format;
-            break;
-        }
-    }
+    //std::vector<VkFormat> depthFormatList{
+        //VK_FORMAT_D32_SFLOAT_S8_UINT,
+        //VK_FORMAT_D24_UNORM_S8_UINT
+    //};
+    //for (VkFormat& format : depthFormatList)
+    //{
+        //VkFormatProperties2 formatProperties{ .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
+        //vkGetPhysicalDeviceFormatProperties2(vkPhysicalDevices[physicalDeviceIndex], format, &formatProperties);
+        //if (formatProperties.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        //{
+            //m_depthFormat = format;
+            //break;
+        //}
+    //}
 
-    m_depthImageCI =
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .format = m_depthFormat,
-        .extent{
-            .width = static_cast<uint32_t>(m_glmWindowSize.x),
-            .height = static_cast<uint32_t>(m_glmWindowSize.y),
-            .depth = 1
-        },
-        .mipLevels = 1,
-        .arrayLayers = 1,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .tiling = VK_IMAGE_TILING_OPTIMAL,
-        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-    };
+    //m_depthImageCI =
+    //{
+        //.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        //.imageType = VK_IMAGE_TYPE_2D,
+        //.format = m_depthFormat,
+        //.extent{
+            //.width = static_cast<uint32_t>(m_glmWindowSize.x),
+            //.height = static_cast<uint32_t>(m_glmWindowSize.y),
+            //.depth = 1
+        //},
+        //.mipLevels = 1,
+        //.arrayLayers = 1,
+        //.samples = VK_SAMPLE_COUNT_1_BIT,
+        //.tiling = VK_IMAGE_TILING_OPTIMAL,
+        //.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        //.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
+    //};
 
-    VmaAllocationCreateInfo allocationCI
-    {
-        .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        .usage = VMA_MEMORY_USAGE_AUTO
-    };
-    vkResult = vmaCreateImage(
-        m_vmaAllocator,
-        &m_depthImageCI,
-        &allocationCI,
-        &m_vkDepthImage,
-        &m_vmaDepthImageAllocation,
-        nullptr
-    );
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create depth image", vkResult);
+    //VmaAllocationCreateInfo allocationCI
+    //{
+        //.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        //.usage = VMA_MEMORY_USAGE_AUTO
+    //};
+    //vkResult = vmaCreateImage(
+        //m_vmaAllocator,
+        //&m_depthImageCI,
+        //&allocationCI,
+        //&m_vkDepthImage,
+        //&m_vmaDepthImageAllocation,
+        //nullptr
+    //);
+    //RETURN_FALSE_ON_FAIL_VULKAN("Failed to create depth image", vkResult);
 
-    VkImageViewCreateInfo depthViewCI
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = m_vkDepthImage,
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = m_depthFormat,
-        .subresourceRange{
-            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-            .levelCount = 1,
-            .layerCount = 1
-        }
-    };
-    vkResult = vkCreateImageView(m_vkDevice, &depthViewCI, nullptr, &m_vkDepthImageView);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create depth image view", vkResult);
+    //VkImageViewCreateInfo depthViewCI
+    //{
+        //.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        //.image = m_vkDepthImage,
+        //.viewType = VK_IMAGE_VIEW_TYPE_2D,
+        //.format = m_depthFormat,
+        //.subresourceRange{
+            //.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            //.levelCount = 1,
+            //.layerCount = 1
+        //}
+    //};
+    //vkResult = vkCreateImageView(m_vkDevice, &depthViewCI, nullptr, &m_vkDepthImageView);
+    //RETURN_FALSE_ON_FAIL_VULKAN("Failed to create depth image view", vkResult);
     }
 
     { /* Load meshes. */
-    std::string tinyobj_warn;
-    std::string tinyobj_error;
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &tinyobj_warn, &tinyobj_error, "assets/suzanne.obj"))
-    {
-        PRINT_TINYOBJ_CRITICAL_ERROR("Failed to load meshes", tinyobj_warn, tinyobj_error);
-        return false;
-    }
+    //std::string tinyobj_warn;
+    //std::string tinyobj_error;
+    //tinyobj::attrib_t attrib;
+    //std::vector<tinyobj::shape_t> shapes;
+    //std::vector<tinyobj::material_t> materials;
+    //if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &tinyobj_warn, &tinyobj_error, "assets/suzanne.obj"))
+    //{
+        //PRINT_TINYOBJ_CRITICAL_ERROR("Failed to load meshes", tinyobj_warn, tinyobj_error);
+        //return false;
+    //}
 
-    m_vkIndexCount = shapes[0].mesh.indices.size();
-    std::vector<Vertex> vertices{};
-    std::vector<uint16_t> indices{};
-    for (auto& index : shapes[0].mesh.indices)
-    {
-        Vertex v{
-            .pos = { attrib.vertices[index.vertex_index * 3], -attrib.vertices[index.vertex_index * 3 + 1], attrib.vertices[index.vertex_index * 3 + 2] },
-            .normal = { attrib.normals[index.normal_index * 3], -attrib.normals[index.normal_index * 3 + 1], attrib.normals[index.normal_index * 3 + 2] },
-            .uv = { attrib.texcoords[index.texcoord_index * 2], 1.0 - attrib.texcoords[index.texcoord_index * 2 + 1] }
-        };
-        vertices.push_back(v);
-        indices.push_back(indices.size());
-    }
+    //m_vkIndexCount = shapes[0].mesh.indices.size();
+    //std::vector<Vertex> vertices{};
+    //std::vector<uint16_t> indices{};
+    //for (auto& index : shapes[0].mesh.indices)
+    //{
+        //Vertex v{
+            //.pos = { attrib.vertices[index.vertex_index * 3], -attrib.vertices[index.vertex_index * 3 + 1], attrib.vertices[index.vertex_index * 3 + 2] },
+            //.normal = { attrib.normals[index.normal_index * 3], -attrib.normals[index.normal_index * 3 + 1], attrib.normals[index.normal_index * 3 + 2] },
+            //.uv = { attrib.texcoords[index.texcoord_index * 2], 1.0 - attrib.texcoords[index.texcoord_index * 2 + 1] }
+        //};
+        //vertices.push_back(v);
+        //indices.push_back(indices.size());
+    //}
 
-    m_vkBufSize = sizeof(Vertex) * vertices.size();
-    VkDeviceSize iBufSize{ sizeof(uint16_t) * indices.size() };
-    VkBufferCreateInfo bufferCI
-    {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = m_vkBufSize + iBufSize,
-        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
-    };
+    //m_vkBufSize = sizeof(Vertex) * vertices.size();
+    //VkDeviceSize iBufSize{ sizeof(uint16_t) * indices.size() };
+    //VkBufferCreateInfo bufferCI
+    //{
+        //.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        //.size = m_vkBufSize + iBufSize,
+        //.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+    //};
 
-    VmaAllocationCreateInfo vBufferAllocationCI
-    {
-        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-                 | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
-                 | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-        .usage = VMA_MEMORY_USAGE_AUTO
-    };
-    VmaAllocationInfo vBufferAllocationInfo{};
-    vkResult = vmaCreateBuffer(
-        m_vmaAllocator,
-        &bufferCI,
-        &vBufferAllocationCI,
-        &m_vkBuffer,
-        &m_vmaBufferAllocation,
-        &vBufferAllocationInfo
-    );
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
-    memcpy(vBufferAllocationInfo.pMappedData, vertices.data(), m_vkBufSize);
-    memcpy(((char*)vBufferAllocationInfo.pMappedData) + m_vkBufSize, indices.data(), iBufSize);
+    //VmaAllocationCreateInfo vBufferAllocationCI
+    //{
+        //.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+                 //| VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
+                 //| VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        //.usage = VMA_MEMORY_USAGE_AUTO
+    //};
+    //VmaAllocationInfo vBufferAllocationInfo{};
+    //vkResult = vmaCreateBuffer(
+        //m_vmaAllocator,
+        //&bufferCI,
+        //&vBufferAllocationCI,
+        //&m_vkBuffer,
+        //&m_vmaBufferAllocation,
+        //&vBufferAllocationInfo
+    //);
+    //RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
+    //memcpy(vBufferAllocationInfo.pMappedData, vertices.data(), m_vkBufSize);
+    //memcpy(((char*)vBufferAllocationInfo.pMappedData) + m_vkBufSize, indices.data(), iBufSize);
     }
 
     { /* Parallelism. */
