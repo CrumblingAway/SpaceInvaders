@@ -189,7 +189,7 @@ bool SpaceInvadersGame::InitVulkan()
     VmaAllocatorCreateInfo allocatorCI
     {
         .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
-        .physicalDevice = vkPhysicalDevices[physicalDeviceIndex],
+        .physicalDevice = m_vkPhysicalDevice,
         .device = m_vkDevice,
         .pVulkanFunctions = &vkFunctions,
         .instance = m_vkInstance
@@ -199,14 +199,13 @@ bool SpaceInvadersGame::InitVulkan()
     }
 
     { /* Vulkan surface. */
-    if (!SDL_Vulkan_CreateSurface(m_sdlWindow, m_vkInstance, nullptr, &m_vkSurface)
-        || !SDL_GetWindowSize(m_sdlWindow, &m_glmWindowSize.x, &m_glmWindowSize.y))
+    if (!SDL_Vulkan_CreateSurface(m_sdlWindow, m_vkInstance, nullptr, &m_vkSurface))
     {
         PRINT_SDL_CRITICAL_ERROR("Failed to create Vulkan surface");
         return false;
     }
     vkResult = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        vkPhysicalDevices[physicalDeviceIndex],
+        m_vkPhysicalDevice,
         m_vkSurface,
         &m_surfaceCapabilities
     );

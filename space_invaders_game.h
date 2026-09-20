@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <vma/vk_mem_alloc.h>
 #include <volk/volk.h>
 
 class SDL_Window;
@@ -75,6 +76,11 @@ private:
     VkPhysicalDevice m_vkPhysicalDevice{ VK_NULL_HANDLE };
     VkDevice m_vkDevice{ VK_NULL_HANDLE };
     VkQueue m_vkQueue{ VK_NULL_HANDLE };
+
+    VkSurfaceKHR m_vkSurface{ VK_NULL_HANDLE };
+    VkSurfaceCapabilitiesKHR m_surfaceCapabilities{};
+
+    VmaAllocator m_vmaAllocator{ VK_NULL_HANDLE };
 
     PlayerSpaceship m_playerSpaceship;
 };
