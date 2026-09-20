@@ -72,6 +72,8 @@ private:
     SDL_Window* m_sdlWindow = nullptr;
 
     VkInstance m_vkInstance{ VK_NULL_HANDLE };
+    VkPhysicalDevice m_vkPhysicalDevice{ VK_NULL_HANDLE };
+    VkDevice m_vkDevice{ VK_NULL_HANDLE };
 
     PlayerSpaceship m_playerSpaceship;
 };

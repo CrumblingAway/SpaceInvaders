@@ -1,6 +1,8 @@
 #include "space_invaders_game.h"
 
+#include <cstddef>
 #include <iostream>
+#include <vector>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
@@ -60,24 +62,6 @@ bool SpaceInvadersGame::InitSDL()
     return true;
 }
 
-bool SpaceInvadersGame::Run()
-{
-    bool quit{ false };
-    while (!quit)
-    {
-        for (SDL_Event event; SDL_PollEvent(&event);)
-        {
-            // Exit loop if the application is about to close
-            if (event.type == SDL_EVENT_QUIT)
-            {
-                quit = true;
-                break;
-            }
-        }
-    }
-    
-    return true;
-}
 
 bool SpaceInvadersGame::InitVulkan()
 {
@@ -111,16 +95,18 @@ bool SpaceInvadersGame::InitVulkan()
     }
 
     { /* Physical device. */
+    uint32_t physicalDeviceIndex{ 0 };
+    std::vector<VkPhysicalDevice> vkPhysicalDevices;
     uint32_t deviceCount{ 0 };
     vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, nullptr);
-    m_vkDevices.resize(deviceCount);
-    vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, m_vkDevices.data());
+    vkPhysicalDevices.resize(deviceCount);
+    vkResult = vkEnumeratePhysicalDevices(m_vkInstance, &deviceCount, vkPhysicalDevices.data());
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to enumerate physical devices", vkResult);
     VkPhysicalDeviceProperties2 deviceProperties
     {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
     };
-    vkGetPhysicalDeviceProperties2(m_vkDevices[m_deviceIndex], &deviceProperties);
+    vkGetPhysicalDeviceProperties2(vkPhysicalDevices[physicalDeviceIndex], &deviceProperties);
     std::cout << "Selected device: " << deviceProperties.properties.deviceName <<  "\n";
     }
 
@@ -128,9 +114,9 @@ bool SpaceInvadersGame::InitVulkan()
     { /* Queue family. */
     #pragma region Get queue family info.
     uint32_t queueFamilyCount{ 0 };
-    vkGetPhysicalDeviceQueueFamilyProperties(m_vkDevices[m_deviceIndex], &queueFamilyCount, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevices[physicalDeviceIndex], &queueFamilyCount, nullptr);
     std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(m_vkDevices[m_deviceIndex], &queueFamilyCount, queueFamilies.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(vkPhysicalDevices[physicalDeviceIndex], &queueFamilyCount, queueFamilies.data());
     for (size_t i = 0; i < queueFamilies.size(); ++i)
     {
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
@@ -139,7 +125,7 @@ bool SpaceInvadersGame::InitVulkan()
             break;
         }
     }
-    if (!SDL_Vulkan_GetPresentationSupport(m_vkInstance, m_vkDevices[m_deviceIndex], queueFamily))
+    if (!SDL_Vulkan_GetPresentationSupport(m_vkInstance, vkPhysicalDevices[physicalDeviceIndex], queueFamily))
     {
         PRINT_SDL_CRITICAL_ERROR("Presentation not supported with provided Vulkan physical device and"
         " queue family");
@@ -189,7 +175,7 @@ bool SpaceInvadersGame::InitVulkan()
         .ppEnabledExtensionNames = deviceExtensions.data(),
         .pEnabledFeatures = &enabledVk10Features
     };
-    vkResult = vkCreateDevice(m_vkDevices[m_deviceIndex], &deviceCI, nullptr, &m_vkDevice);
+    vkResult = vkCreateDevice(vkPhysicalDevices[physicalDeviceIndex], &deviceCI, nullptr, &m_vkDevice);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create device handle", vkResult);
     vkGetDeviceQueue(m_vkDevice, queueFamily, 0, &m_vkQueue);
     }
@@ -204,7 +190,7 @@ bool SpaceInvadersGame::InitVulkan()
     VmaAllocatorCreateInfo allocatorCI
     {
         .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
-        .physicalDevice = m_vkDevices[m_deviceIndex],
+        .physicalDevice = vkPhysicalDevices[physicalDeviceIndex],
         .device = m_vkDevice,
         .pVulkanFunctions = &vkFunctions,
         .instance = m_vkInstance
@@ -221,7 +207,7 @@ bool SpaceInvadersGame::InitVulkan()
         return false;
     }
     vkResult = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        m_vkDevices[m_deviceIndex],
+        vkPhysicalDevices[physicalDeviceIndex],
         m_vkSurface,
         &m_surfaceCapabilities
     );
@@ -288,7 +274,7 @@ bool SpaceInvadersGame::InitVulkan()
     for (VkFormat& format : depthFormatList)
     {
         VkFormatProperties2 formatProperties{ .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
-        vkGetPhysicalDeviceFormatProperties2(m_vkDevices[m_deviceIndex], format, &formatProperties);
+        vkGetPhysicalDeviceFormatProperties2(vkPhysicalDevices[physicalDeviceIndex], format, &formatProperties);
         if (formatProperties.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {
             m_depthFormat = format;
@@ -933,6 +919,25 @@ bool SpaceInvadersGame::InitVulkan()
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create graphics pipeline", vkResult);
     }
 
+    return true;
+}
+
+bool SpaceInvadersGame::Run()
+{
+    bool quit{ false };
+    while (!quit)
+    {
+        for (SDL_Event event; SDL_PollEvent(&event);)
+        {
+            // Exit loop if the application is about to close
+            if (event.type == SDL_EVENT_QUIT)
+            {
+                quit = true;
+                break;
+            }
+        }
+    }
+    
     return true;
 }
 
