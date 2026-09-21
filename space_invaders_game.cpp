@@ -389,56 +389,61 @@ bool SpaceInvadersGame::InitVulkan()
     }
 
     { /* Parallelism. */
-    for (uint32_t i = 0; i < m_maxFramesInFlight; ++i)
-    {
-        VkBufferCreateInfo uBufferCI
-        {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = sizeof(ShaderData),
-            .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-        };
-        VmaAllocationCreateInfo uBufferAllocCI
-        {
-            .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-                        | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
-                        | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            .usage = VMA_MEMORY_USAGE_AUTO
-        };
-        vkResult = vmaCreateBuffer(
-            m_vmaAllocator,
-            &uBufferCI,
-            &uBufferAllocCI,
-            &m_shaderDataBuffers[i].buffer,
-            &m_shaderDataBuffers[i].allocation,
-            &m_shaderDataBuffers[i].allocationInfo
-        );
-        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
+    //for (uint32_t i = 0; i < m_maxFramesInFlight; ++i)
+    //{
+        //VkBufferCreateInfo uBufferCI
+        //{
+            //.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            //.size = sizeof(ShaderData),
+            //.usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+        //};
+        //VmaAllocationCreateInfo uBufferAllocCI
+        //{
+            //.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+                        //| VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
+                        //| VMA_ALLOCATION_CREATE_MAPPED_BIT,
+            //.usage = VMA_MEMORY_USAGE_AUTO
+        //};
+        //vkResult = vmaCreateBuffer(
+            //m_vmaAllocator,
+            //&uBufferCI,
+            //&uBufferAllocCI,
+            //&m_shaderDataBuffers[i].buffer,
+            //&m_shaderDataBuffers[i].allocation,
+            //&m_shaderDataBuffers[i].allocationInfo
+        //);
+        //RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
 
-        VkBufferDeviceAddressInfo uBufferBdaInfo
-        {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-            .buffer = m_shaderDataBuffers[i].buffer
-        };
-        m_shaderDataBuffers[i].deviceAddress = vkGetBufferDeviceAddress(m_vkDevice, &uBufferBdaInfo);
-    }
+        //VkBufferDeviceAddressInfo uBufferBdaInfo
+        //{
+            //.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+            //.buffer = m_shaderDataBuffers[i].buffer
+        //};
+        //m_shaderDataBuffers[i].deviceAddress = vkGetBufferDeviceAddress(m_vkDevice, &uBufferBdaInfo);
+    //}
 
     VkFenceCreateInfo fenceCI
     {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT
     };
+    VkSemaphoreCreateInfo semaphoreCI
+    {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
+    };
+
     for (uint32_t i = 0; i < m_maxFramesInFlight; ++i)
     {
         vkResult = vkCreateFence(m_vkDevice, &fenceCI, nullptr, &m_vkFences[i]);
         RETURN_FALSE_ON_FAIL_VULKAN("Failed to create fences", vkResult);
-        vkResult = vkCreateSemaphore(m_vkDevice, &m_semaphoreCI, nullptr, &m_vkImageAcquiredSemaphores[i]);
+        vkResult = vkCreateSemaphore(m_vkDevice, &semaphoreCI, nullptr, &m_vkImageAcquiredSemaphores[i]);
         RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphores", vkResult);
         
     }
     m_vkRenderCompleteSemaphores.resize(m_vkSwapchainImages.size());
     for (auto& semaphore : m_vkRenderCompleteSemaphores)
     {
-        vkResult = vkCreateSemaphore(m_vkDevice, &m_semaphoreCI, nullptr, &semaphore);
+        vkResult = vkCreateSemaphore(m_vkDevice, &semaphoreCI, nullptr, &semaphore);
         RETURN_FALSE_ON_FAIL_VULKAN("Failed to create semaphore", vkResult);
     }
     }

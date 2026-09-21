@@ -83,10 +83,17 @@ private:
     std::vector<VkImageView> m_vkSwapchainImageViews;
     VkImage m_vkDepthImage{ VK_NULL_HANDLE };
     VkImageView m_vkDepthImageView{ VK_NULL_HANDLE };
-    const uint32_t m_maxFramesInFlight{ 2 };
+    static constexpr uint32_t m_maxFramesInFlight{ 2 };
 
     VmaAllocator m_vmaAllocator{ VK_NULL_HANDLE };
     VmaAllocation m_vmaDepthImageAllocation{ VK_NULL_HANDLE };
+
+    std::array<VkFence, m_maxFramesInFlight> m_vkFences;
+    std::array<VkSemaphore, m_maxFramesInFlight> m_vkImageAcquiredSemaphores;
+    std::vector<VkSemaphore> m_vkRenderCompleteSemaphores;
+
+    VkCommandPool m_vkCommandPool{ VK_NULL_HANDLE };
+    std::array<VkCommandBuffer, m_maxFramesInFlight> m_vkCommandBuffers;
 
     PlayerSpaceship m_playerSpaceship;
 };
