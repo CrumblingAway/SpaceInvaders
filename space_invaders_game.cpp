@@ -40,6 +40,10 @@ bool SpaceInvadersGame::Init()
     {
         return false;
     }
+    if (!InitVulkan())
+    {
+        return false;
+    }
 
     return true;
 }
@@ -116,7 +120,8 @@ bool SpaceInvadersGame::InitVulkan()
     {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2
     };
-    vkGetPhysicalDeviceProperties2(vkPhysicalDevices[physicalDeviceIndex], &deviceProperties);
+    m_vkPhysicalDevice = vkPhysicalDevices[physicalDeviceIndex];
+    vkGetPhysicalDeviceProperties2(m_vkPhysicalDevice, &deviceProperties);
     std::cout << "Selected device: " << deviceProperties.properties.deviceName <<  "\n";
     }
 
