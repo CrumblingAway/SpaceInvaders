@@ -75,6 +75,8 @@ private:
     const size_t m_windowWidth = 1280u;
     SDL_Window* m_sdlWindow = nullptr;
 
+    static constexpr uint32_t m_maxFramesInFlight{ 2 };
+
     VkInstance m_vkInstance{ VK_NULL_HANDLE };
     VkPhysicalDevice m_vkPhysicalDevice{ VK_NULL_HANDLE };
     VkDevice m_vkDevice{ VK_NULL_HANDLE };
@@ -92,7 +94,6 @@ private:
     VkShaderModule m_vkShaderModule{};
     VkPipeline m_vkPipeline{ VK_NULL_HANDLE };
     VkPipelineLayout m_vkPipelineLayout{ VK_NULL_HANDLE };
-    static constexpr uint32_t m_maxFramesInFlight{ 2 };
 
     VkDescriptorSetLayout m_vkDescriptorSetLayoutTex{ VK_NULL_HANDLE };
     VkDescriptorSet m_vkDescriptorSetTex{ VK_NULL_HANDLE };

@@ -491,8 +491,8 @@ bool SpaceInvadersGame::InitVulkan()
         .imageType = VK_IMAGE_TYPE_2D,
         .format = VK_FORMAT_B8G8R8A8_SRGB,
         .extent = {
-            .width = ss_width,
-            .height = ss_height,
+            .width = static_cast<uint32_t>(ss_width),
+            .height = static_cast<uint32_t>(ss_height),
             .depth = 1
         },
         .mipLevels = 1,
