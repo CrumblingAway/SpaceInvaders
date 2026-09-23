@@ -6,9 +6,12 @@
 
 class SDL_Window;
 
-class Texture
+struct Texture
 {
-
+    VkImage image{ VK_NULL_HANDLE };
+    VkImageView imageView{ VK_NULL_HANDLE };
+    VmaAllocation imageAllocation{ VK_NULL_HANDLE };
+    VkSampler sampler{ VK_NULL_HANDLE };
 };
 
 class Shape
@@ -94,6 +97,10 @@ private:
 
     VkCommandPool m_vkCommandPool{ VK_NULL_HANDLE };
     std::array<VkCommandBuffer, m_maxFramesInFlight> m_vkCommandBuffers;
+
+    VkDescriptorSetLayout m_vkDescriptorSetLayoutTex{ VK_NULL_HANDLE };
+    VkDescriptorSet m_vkDescriptorSetTex{ VK_NULL_HANDLE };
+    VkDescriptorPool m_vkDescriptorPool{ VK_NULL_HANDLE };
 
     PlayerSpaceship m_playerSpaceship;
 };
