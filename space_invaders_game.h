@@ -90,6 +90,8 @@ private:
     VkImage m_vkDepthImage{ VK_NULL_HANDLE };
     VkImageView m_vkDepthImageView{ VK_NULL_HANDLE };
     VkShaderModule m_vkShaderModule{};
+    VkPipeline m_vkPipeline{ VK_NULL_HANDLE };
+    VkPipelineLayout m_vkPipelineLayout{ VK_NULL_HANDLE };
     static constexpr uint32_t m_maxFramesInFlight{ 2 };
 
     VkDescriptorSetLayout m_vkDescriptorSetLayoutTex{ VK_NULL_HANDLE };

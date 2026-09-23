@@ -22,6 +22,13 @@
         return false;\
     }
 
+struct Vertex
+{
+    glm::vec3 pos;
+    glm::vec3 normal;
+    glm::vec2 uv;
+};
+
 SpaceInvadersGame::~SpaceInvadersGame()
 {
     Destroy();
@@ -215,6 +222,7 @@ bool SpaceInvadersGame::InitVulkan()
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to get physical device surface capabilities", vkResult);
     }
 
+    const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
     { /* Swapchain. */
     VkExtent2D swapchainExtent{ m_surfaceCapabilities.currentExtent };
     if (m_surfaceCapabilities.currentExtent.width == 0xFFFFFFFF)
@@ -225,7 +233,6 @@ bool SpaceInvadersGame::InitVulkan()
         };
     }
 
-    const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
     VkSwapchainCreateInfoKHR swapchainCI = 
     {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -244,7 +251,7 @@ bool SpaceInvadersGame::InitVulkan()
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create swapchain", vkResult);
 
     uint32_t imageCount{ 0 };
-    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, imageCount, nullptr);
+    vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &imageCount, nullptr);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to get swapchain images", vkResult);
     m_vkSwapchainImages.resize(imageCount);
     vkResult = vkGetSwapchainImagesKHR(m_vkDevice, m_vkSwapchain, &imageCount, m_vkSwapchainImages.data());
@@ -269,8 +276,8 @@ bool SpaceInvadersGame::InitVulkan()
     }
     }
 
-    { /* Depth attachment. */
     VkFormat depthFormat { VK_FORMAT_UNDEFINED };
+    { /* Depth attachment. */
     std::vector<VkFormat> depthFormatList{
         VK_FORMAT_D32_SFLOAT_S8_UINT,
         VK_FORMAT_D24_UNORM_S8_UINT
