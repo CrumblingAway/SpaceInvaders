@@ -512,15 +512,15 @@ bool SpaceInvadersGame::InitVulkan()
         m_vmaAllocator,
         &texImgCI,
         &texImageAllocationCI,
-        &m_playerSpaceship.sprite->image,
-        &m_playerSpaceship.sprite->imageAllocation,
+        &m_playerSpaceship.sprite.image,
+        &m_playerSpaceship.sprite.imageAllocation,
         nullptr
     );
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship texture", vkResult);
     VkImageViewCreateInfo texViewCI
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = m_playerSpaceship.sprite->image,
+        .image = m_playerSpaceship.sprite.image,
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
         .format = texImgCI.format,
         .subresourceRange = {
@@ -529,7 +529,7 @@ bool SpaceInvadersGame::InitVulkan()
             .layerCount = 1
         }
     };
-    vkResult = vkCreateImageView(m_vkDevice, &texViewCI, nullptr, &m_playerSpaceship.sprite->imageView);
+    vkResult = vkCreateImageView(m_vkDevice, &texViewCI, nullptr, &m_playerSpaceship.sprite.imageView);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship texture image view", vkResult);
     VkBuffer imgSrcBuffer{};
     VmaAllocation imgSrcAllocation{};
@@ -591,7 +591,7 @@ bool SpaceInvadersGame::InitVulkan()
         .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        .image = m_playerSpaceship.sprite->image,
+        .image = m_playerSpaceship.sprite.image,
         .subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .levelCount = 1,
@@ -616,7 +616,7 @@ bool SpaceInvadersGame::InitVulkan()
         .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
         .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .newLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-        .image = m_playerSpaceship.sprite->image,
+        .image = m_playerSpaceship.sprite.image,
         .subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .levelCount = 1,
@@ -656,7 +656,7 @@ bool SpaceInvadersGame::InitVulkan()
         .maxAnisotropy = 8.0f, // widely supported value for max anisotropy
         .maxLod = 1.0f
     };
-    vkResult = vkCreateSampler(m_vkDevice, &samplerCI, nullptr, &m_playerSpaceship.sprite->sampler);
+    vkResult = vkCreateSampler(m_vkDevice, &samplerCI, nullptr, &m_playerSpaceship.sprite.sampler);
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship sampler", vkResult);
 
     stbi_image_free(spaceship_image);

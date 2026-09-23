@@ -22,7 +22,7 @@ class Shape
 struct PlayerSpaceship
 {
     /* Rendering. */
-    Texture* sprite;
+    Texture sprite;
 
     /* Logic. */
     glm::vec3 position;
