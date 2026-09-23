@@ -6,6 +6,8 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
+#include <slang/slang.h>
+#include <slang/slang-com-ptr.h>
 #include <stb/stb_image.h>
 
 #define PRINT_SDL_CRITICAL_ERROR(text)\
@@ -718,10 +720,12 @@ bool SpaceInvadersGame::InitVulkan()
     {} // Unknown. Removing these braces means vscode does not recognize the braces below as foldable.
 
     { /* Shaders. */
-    slang::createGlobalSession(m_slangGlobalSession.writeRef());
+    Slang::ComPtr<slang::IGlobalSession> slangGlobalSession;
+
+    slang::createGlobalSession(slangGlobalSession.writeRef());
     auto slangTargets{ std::to_array<slang::TargetDesc>({ {
         .format{ SLANG_SPIRV },
-        .profile{ m_slangGlobalSession->findProfile("spirv_1_4") }
+        .profile{ slangGlobalSession->findProfile("spirv_1_4") }
     }})};
     auto slangOptions{ std::to_array<slang::CompilerOptionEntry>({ {
         slang::CompilerOptionName::EmitSpirvDirectly,
@@ -736,11 +740,11 @@ bool SpaceInvadersGame::InitVulkan()
         .compilerOptionEntryCount{ uint32_t(slangOptions.size()) }
     };
     Slang::ComPtr<slang::ISession> slangSession;
-    m_slangGlobalSession->createSession(slangSessionDesc, slangSession.writeRef());
+    slangGlobalSession->createSession(slangSessionDesc, slangSession.writeRef());
 
     Slang::ComPtr<slang::IModule> slangModule
     {
-        slangSession->loadModuleFromSource("triangle", "assets/shader.slang", nullptr, nullptr)
+        slangSession->loadModuleFromSource("triangle", "assets/player_shader.slang", nullptr, nullptr)
     };
     Slang::ComPtr<ISlangBlob> spirv;
     slangModule->getTargetCode(0, spirv.writeRef());
