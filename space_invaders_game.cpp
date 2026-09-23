@@ -660,6 +660,11 @@ bool SpaceInvadersGame::InitVulkan()
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship sampler", vkResult);
 
     stbi_image_free(spaceship_image);
+    textureDescriptors.push_back({
+        .sampler = m_playerSpaceship.sprite.sampler,
+        .imageView = m_playerSpaceship.sprite.imageView,
+        .imageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL
+    });
 
     VkDescriptorBindingFlags descVariableFlag{ VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT };
     VkDescriptorSetLayoutBindingFlagsCreateInfo descBindingFlags
