@@ -65,6 +65,12 @@ private:
     bool CleanupVulkan();
 
     /**
+     * Init player and enemies.
+     */
+    bool InitObjects();
+    bool CleanupObjects();
+
+    /**
      * Clean up the resources associated with this instance of the game.
      */
     bool Destroy();

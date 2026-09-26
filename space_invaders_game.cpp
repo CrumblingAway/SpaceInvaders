@@ -44,6 +44,10 @@ bool SpaceInvadersGame::Init()
     {
         return false;
     }
+    if (!InitObjects())
+    {
+        return false;
+    }
 
     return true;
 }
@@ -917,6 +921,13 @@ bool SpaceInvadersGame::InitVulkan()
     return true;
 }
 
+bool SpaceInvadersGame::InitObjects()
+{
+    m_playerSpaceship.position = glm::vec3(0.0f);
+
+    return true;
+}
+
 bool SpaceInvadersGame::Run()
 {
     bool quit{ false };
@@ -930,14 +941,11 @@ bool SpaceInvadersGame::Run()
                 quit = true;
                 break;
             }
+
+
         }
     }
     
-    return true;
-}
-
-bool SpaceInvadersGame::Destroy()
-{
     return true;
 }
 
@@ -948,4 +956,21 @@ bool SpaceInvadersGame::CleanupSDL()
     SDL_Quit();
 
     return true;
+}
+
+bool SpaceInvadersGame::CleanupVulkan()
+{
+    return true;
+}
+
+bool SpaceInvadersGame::CleanupObjects()
+{
+    return true;
+}
+
+bool SpaceInvadersGame::Destroy()
+{
+    return CleanupObjects()
+           && CleanupVulkan()
+           && CleanupSDL();
 }
