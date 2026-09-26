@@ -463,7 +463,7 @@ bool SpaceInvadersGame::InitVulkan()
     std::vector<VkDescriptorImageInfo> textureDescriptors{};
 
     int ss_width, ss_height, ss_channels;
-    unsigned char* spaceship_image = stbi_load("assets/test_512x512_rgba_image.jpg", &ss_width, &ss_height, &ss_channels, 0);
+    unsigned char* spaceship_image = stbi_load("assets/player_spaceship.png", &ss_width, &ss_height, &ss_channels, 0);
     if (!spaceship_image)
     {
         PRINT_STBI_CRITICAL_ERROR(stbi_failure_reason());
@@ -651,8 +651,8 @@ bool SpaceInvadersGame::InitVulkan()
     VkSamplerCreateInfo samplerCI
     {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_LINEAR,
-        .minFilter = VK_FILTER_LINEAR,
+        .magFilter = VK_FILTER_NEAREST,
+        .minFilter = VK_FILTER_NEAREST,
         .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
         .anisotropyEnable = VK_TRUE,
         .maxAnisotropy = 8.0f, // widely supported value for max anisotropy
