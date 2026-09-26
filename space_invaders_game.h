@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include <glm/glm.hpp>
 #include <vma/vk_mem_alloc.h>
 #include <volk/volk.h>

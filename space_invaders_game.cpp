@@ -931,250 +931,250 @@ bool SpaceInvadersGame::Run()
                 quit = true;
                 break;
             }
+        }
 
-            { /* Handle user input. */}
+        { /* Handle user input. */}
 
-            { /* Render. */
-            { /* Wait on fence. */
-            vkResult = vkWaitForFences(m_vkDevice, 1, &m_vkFences[m_frameIndex], true, UINT64_MAX);
-            RETURN_FALSE_ON_FAIL_VULKAN("Failed to wait for fence", vkResult);
-            vkResult = vkResetFences(m_vkDevice, 1, &m_vkFences[m_frameIndex]);
-            RETURN_FALSE_ON_FAIL_VULKAN("Failed to reset fence", vkResult);
-            }
+        { /* Render. */
+        { /* Wait on fence. */
+        vkResult = vkWaitForFences(m_vkDevice, 1, &m_vkFences[m_frameIndex], true, UINT64_MAX);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to wait for fence", vkResult);
+        vkResult = vkResetFences(m_vkDevice, 1, &m_vkFences[m_frameIndex]);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to reset fence", vkResult);
+        }
 
-            { /* Acquire next image. */
-            vkResult = vkAcquireNextImageKHR(
-                m_vkDevice,
-                m_vkSwapchain,
-                UINT64_MAX,
-                m_vkImageAcquiredSemaphores[m_frameIndex],
-                VK_NULL_HANDLE,
-                &m_imageIndex
-            ); 
-            if (!CheckSwapchain(vkResult))
-            {
-                return false;
-            }
-            }
-            { /* Update shader data. */ 
-            m_playerShaderData.view = glm::translate(glm::mat4(1.0f), m_camera.position);
-            m_playerShaderData.model = glm::translate(glm::mat4(1.0f), m_playerSpaceship.position);
-            memcpy(m_shaderDataBuffers[m_frameIndex].allocationInfo.pMappedData, &m_playerShaderData, sizeof(PlayerShaderData));
-            }
+        { /* Acquire next image. */
+        vkResult = vkAcquireNextImageKHR(
+            m_vkDevice,
+            m_vkSwapchain,
+            UINT64_MAX,
+            m_vkImageAcquiredSemaphores[m_frameIndex],
+            VK_NULL_HANDLE,
+            &m_imageIndex
+        ); 
+        if (!CheckSwapchain(vkResult))
+        {
+            return false;
+        }
+        }
+        { /* Update shader data. */ 
+        m_playerShaderData.view = glm::translate(glm::mat4(1.0f), m_camera.position);
+        m_playerShaderData.model = glm::translate(glm::mat4(1.0f), m_playerSpaceship.position);
+        memcpy(m_shaderDataBuffers[m_frameIndex].allocationInfo.pMappedData, &m_playerShaderData, sizeof(PlayerShaderData));
+        }
 
-            auto cb = m_vkCommandBuffers[m_frameIndex];
-            { /* Record command buffer. */
-            vkResult = vkResetCommandBuffer(cb, 0);
-            RETURN_FALSE_ON_FAIL_VULKAN("Failed to reset command buffer", vkResult);
+        auto cb = m_vkCommandBuffers[m_frameIndex];
+        { /* Record command buffer. */
+        vkResult = vkResetCommandBuffer(cb, 0);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to reset command buffer", vkResult);
 
-            VkCommandBufferBeginInfo cbBI
-            {
-                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-            };
-            vkResult = vkBeginCommandBuffer(cb, &cbBI);
-            RETURN_FALSE_ON_FAIL_VULKAN("Failed to begin command buffer", vkResult);
+        VkCommandBufferBeginInfo cbBI
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+        };
+        vkResult = vkBeginCommandBuffer(cb, &cbBI);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to begin command buffer", vkResult);
 
-            std::array<VkImageMemoryBarrier2, 2> outputBarriers
-            {
-                VkImageMemoryBarrier2
-                {
-                    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-                    .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    .srcAccessMask = 0,
-                    .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                    .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                    .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                    .newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                    .image = m_vkSwapchainImages[m_imageIndex],
-                    .subresourceRange{
-                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                        .levelCount = 1,
-                        .layerCount = 1
-                    }
-                },
-                VkImageMemoryBarrier2
-                {
-                    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-                    .srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
-                    .srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                    .dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
-                    .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                    .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                    .newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                    .image = m_vkDepthImage,
-                    .subresourceRange{
-                        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-                        .levelCount = 1,
-                        .layerCount = 1
-                    }
-                }
-            };
-            VkDependencyInfo barrierDependencyInfo
-            {
-                .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-                .imageMemoryBarrierCount = static_cast<uint32_t>(outputBarriers.size()),
-                .pImageMemoryBarriers = outputBarriers.data()
-            };
-            vkCmdPipelineBarrier2(cb, &barrierDependencyInfo);
-
-            VkRenderingAttachmentInfo colorAttachmentInfo
-            {
-                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-                .imageView = m_vkSwapchainImageViews[m_imageIndex],
-                .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-                .clearValue{ .color{ 0.0f, 0.0f, 0.2f, 1.0f }}
-            };
-            VkRenderingAttachmentInfo depthAttachmentInfo
-            {
-                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-                .imageView = m_vkDepthImageView,
-                .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-                .clearValue = { .depthStencil = { 1.0f, 0 } }
-            };
-
-            VkRenderingInfo renderingInfo
-            {
-                .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-                .renderArea{
-                    .extent {
-                        .width = static_cast<uint32_t>(m_windowWidth),
-                        .height = static_cast<uint32_t>(m_windowHeight)
-                    }
-                },
-                .layerCount = 1,
-                .colorAttachmentCount = 1,
-                .pColorAttachments = &colorAttachmentInfo,
-                .pDepthAttachment = &depthAttachmentInfo
-            };
-            vkCmdBeginRendering(cb, &renderingInfo);
-
-            VkViewport vp
-            {
-                .width = static_cast<float>(m_windowWidth),
-                .height = static_cast<float>(m_windowHeight),
-                .minDepth = 0.0f,
-                .maxDepth = 1.0f
-            };
-            vkCmdSetViewport(cb, 0, 1, &vp);
-            VkRect2D scissor
-            {
-                .extent{
-                    .width = static_cast<uint32_t>(m_windowWidth),
-                    .height = static_cast<uint32_t>(m_windowHeight)
-                }
-            };
-            vkCmdSetScissor(cb, 0, 1, &scissor);
-
-            vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vkPipeline);
-            VkDeviceSize vOffset{ 0 };
-            vkCmdBindDescriptorSets(
-                cb,
-                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                m_vkPipelineLayout,
-                0,
-                1,
-                &m_vkDescriptorSetTex,
-                0,
-                nullptr
-            );
-            vkCmdBindVertexBuffers(cb, 0, 1, &m_playerSpaceship.buffer, &vOffset);
-            vkCmdBindIndexBuffer(cb, m_playerSpaceship.buffer, sizeof(Vertex) * Sprite::NUM_VERTICES, VK_INDEX_TYPE_UINT16);
-
-            vkCmdPushConstants(
-                cb,
-                m_vkPipelineLayout,
-                VK_SHADER_STAGE_VERTEX_BIT,
-                0,
-                sizeof(VkDeviceAddress),
-                &m_shaderDataBuffers[m_frameIndex].deviceAddress
-            );
-
-            vkCmdDrawIndexed(cb, 6, 3, 0, 0, 0);
-            vkCmdEndRendering(cb);
-
-            VkImageMemoryBarrier2 barrierPresent
+        std::array<VkImageMemoryBarrier2, 2> outputBarriers
+        {
+            VkImageMemoryBarrier2
             {
                 .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
                 .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .srcAccessMask = 0,
                 .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .dstAccessMask = 0,
-                .oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
                 .image = m_vkSwapchainImages[m_imageIndex],
                 .subresourceRange{
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     .levelCount = 1,
                     .layerCount = 1
                 }
-            };
-            VkDependencyInfo barrierPresentDependencyInfo
+            },
+            VkImageMemoryBarrier2
             {
-                .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-                .imageMemoryBarrierCount = 1,
-                .pImageMemoryBarriers = &barrierPresent
-            };
-            vkCmdPipelineBarrier2(cb, &barrierPresentDependencyInfo);
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+                .srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+                .srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                .image = m_vkDepthImage,
+                .subresourceRange{
+                    .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+                    .levelCount = 1,
+                    .layerCount = 1
+                }
+            }
+        };
+        VkDependencyInfo barrierDependencyInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .imageMemoryBarrierCount = static_cast<uint32_t>(outputBarriers.size()),
+            .pImageMemoryBarriers = outputBarriers.data()
+        };
+        vkCmdPipelineBarrier2(cb, &barrierDependencyInfo);
 
-            vkEndCommandBuffer(cb);
-            }
+        VkRenderingAttachmentInfo colorAttachmentInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = m_vkSwapchainImageViews[m_imageIndex],
+            .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .clearValue{ .color{ 0.0f, 0.0f, 0.2f, 1.0f }}
+        };
+        VkRenderingAttachmentInfo depthAttachmentInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = m_vkDepthImageView,
+            .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .clearValue = { .depthStencil = { 1.0f, 0 } }
+        };
 
-            { /* Submit command buffer. */
-            VkSemaphoreSubmitInfo waitSemaphoreInfo
-            {
-                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-                .semaphore = m_vkImageAcquiredSemaphores[m_frameIndex],
-                .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
-            };
-            VkCommandBufferSubmitInfo commandBufferSubmitInfo
-            {
-                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-                .commandBuffer = cb
-            };
-            VkSemaphoreSubmitInfo signalSemaphoreInfo
-            {
-                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-                .semaphore = m_vkRenderCompleteSemaphores[m_imageIndex],
-                .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
-            };
-            VkSubmitInfo2 submitInfo
-            {
-                .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-                .waitSemaphoreInfoCount = 1,
-                .pWaitSemaphoreInfos = &waitSemaphoreInfo,
-                .commandBufferInfoCount = 1,
-                .pCommandBufferInfos = &commandBufferSubmitInfo,
-                .signalSemaphoreInfoCount = 1,
-                .pSignalSemaphoreInfos = &signalSemaphoreInfo
-            };
-            vkResult = vkQueueSubmit2(m_vkQueue, 1, &submitInfo, m_vkFences[m_frameIndex]);
-            RETURN_FALSE_ON_FAIL_VULKAN("Failed to submit queue", vkResult);
+        VkRenderingInfo renderingInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+            .renderArea{
+                .extent {
+                    .width = static_cast<uint32_t>(m_windowWidth),
+                    .height = static_cast<uint32_t>(m_windowHeight)
+                }
+            },
+            .layerCount = 1,
+            .colorAttachmentCount = 1,
+            .pColorAttachments = &colorAttachmentInfo,
+            .pDepthAttachment = &depthAttachmentInfo
+        };
+        vkCmdBeginRendering(cb, &renderingInfo);
 
-            m_frameIndex = (m_frameIndex + 1) % m_maxFramesInFlight;
+        VkViewport vp
+        {
+            .width = static_cast<float>(m_windowWidth),
+            .height = static_cast<float>(m_windowHeight),
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f
+        };
+        vkCmdSetViewport(cb, 0, 1, &vp);
+        VkRect2D scissor
+        {
+            .extent{
+                .width = static_cast<uint32_t>(m_windowWidth),
+                .height = static_cast<uint32_t>(m_windowHeight)
             }
+        };
+        vkCmdSetScissor(cb, 0, 1, &scissor);
 
-            { /* Present image. */
-            VkPresentInfoKHR presentInfo
-            {
-                .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-                .waitSemaphoreCount = 1,
-                .pWaitSemaphores = &m_vkRenderCompleteSemaphores[m_imageIndex],
-                .swapchainCount = 1,
-                .pSwapchains = &m_vkSwapchain,
-                .pImageIndices = &m_imageIndex
-            };
-            vkResult = vkQueuePresentKHR(m_vkQueue, &presentInfo);
-            if (!CheckSwapchain(vkResult))
-            {
-                return false;
+        vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vkPipeline);
+        VkDeviceSize vOffset{ 0 };
+        vkCmdBindDescriptorSets(
+            cb,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            m_vkPipelineLayout,
+            0,
+            1,
+            &m_vkDescriptorSetTex,
+            0,
+            nullptr
+        );
+        vkCmdBindVertexBuffers(cb, 0, 1, &m_playerSpaceship.buffer, &vOffset);
+        vkCmdBindIndexBuffer(cb, m_playerSpaceship.buffer, sizeof(Vertex) * Sprite::NUM_VERTICES, VK_INDEX_TYPE_UINT16);
+
+        vkCmdPushConstants(
+            cb,
+            m_vkPipelineLayout,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(VkDeviceAddress),
+            &m_shaderDataBuffers[m_frameIndex].deviceAddress
+        );
+
+        vkCmdDrawIndexed(cb, 6, 3, 0, 0, 0);
+        vkCmdEndRendering(cb);
+
+        VkImageMemoryBarrier2 barrierPresent
+        {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .dstAccessMask = 0,
+            .oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            .image = m_vkSwapchainImages[m_imageIndex],
+            .subresourceRange{
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .levelCount = 1,
+                .layerCount = 1
             }
-            }
-            }
+        };
+        VkDependencyInfo barrierPresentDependencyInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .imageMemoryBarrierCount = 1,
+            .pImageMemoryBarriers = &barrierPresent
+        };
+        vkCmdPipelineBarrier2(cb, &barrierPresentDependencyInfo);
+
+        vkEndCommandBuffer(cb);
+        }
+
+        { /* Submit command buffer. */
+        VkSemaphoreSubmitInfo waitSemaphoreInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = m_vkImageAcquiredSemaphores[m_frameIndex],
+            .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
+        };
+        VkCommandBufferSubmitInfo commandBufferSubmitInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+            .commandBuffer = cb
+        };
+        VkSemaphoreSubmitInfo signalSemaphoreInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = m_vkRenderCompleteSemaphores[m_imageIndex],
+            .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
+        };
+        VkSubmitInfo2 submitInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+            .waitSemaphoreInfoCount = 1,
+            .pWaitSemaphoreInfos = &waitSemaphoreInfo,
+            .commandBufferInfoCount = 1,
+            .pCommandBufferInfos = &commandBufferSubmitInfo,
+            .signalSemaphoreInfoCount = 1,
+            .pSignalSemaphoreInfos = &signalSemaphoreInfo
+        };
+        vkResult = vkQueueSubmit2(m_vkQueue, 1, &submitInfo, m_vkFences[m_frameIndex]);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to submit queue", vkResult);
+
+        m_frameIndex = (m_frameIndex + 1) % m_maxFramesInFlight;
+        }
+
+        { /* Present image. */
+        VkPresentInfoKHR presentInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &m_vkRenderCompleteSemaphores[m_imageIndex],
+            .swapchainCount = 1,
+            .pSwapchains = &m_vkSwapchain,
+            .pImageIndices = &m_imageIndex
+        };
+        vkResult = vkQueuePresentKHR(m_vkQueue, &presentInfo);
+        if (!CheckSwapchain(vkResult))
+        {
+            return false;
+        }
+        }
         }
     }
     
