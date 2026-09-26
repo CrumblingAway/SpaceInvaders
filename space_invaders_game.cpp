@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+#include <glm/gtc/matrix_transform.hpp>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <slang/slang.h>
@@ -21,13 +22,6 @@
         PRINT_VULKAN_CRITICAL_ERROR(text, error_num);\
         return false;\
     }
-
-struct Vertex
-{
-    glm::vec3 pos;
-    glm::vec3 normal;
-    glm::vec2 uv;
-};
 
 SpaceInvadersGame::~SpaceInvadersGame()
 {
@@ -351,96 +345,72 @@ bool SpaceInvadersGame::InitVulkan()
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create depth image view", vkResult);
     }
 
-    { /* Load meshes. */
-    //std::string tinyobj_warn;
-    //std::string tinyobj_error;
-    //tinyobj::attrib_t attrib;
-    //std::vector<tinyobj::shape_t> shapes;
-    //std::vector<tinyobj::material_t> materials;
-    //if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &tinyobj_warn, &tinyobj_error, "assets/suzanne.obj"))
-    //{
-        //PRINT_TINYOBJ_CRITICAL_ERROR("Failed to load meshes", tinyobj_warn, tinyobj_error);
-        //return false;
-    //}
+    { /* Sprite vertices. */
+    constexpr uint32_t vkBufSize = sizeof(Vertex) * Sprite::NUM_VERTICES;
+    VkDeviceSize iBufSize{ sizeof(uint16_t) * m_playerSpaceship.vertexIndices.size() };
+    VkBufferCreateInfo bufferCI
+    {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = vkBufSize + iBufSize,
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+    };
 
-    //m_vkIndexCount = shapes[0].mesh.indices.size();
-    //std::vector<Vertex> vertices{};
-    //std::vector<uint16_t> indices{};
-    //for (auto& index : shapes[0].mesh.indices)
-    //{
-        //Vertex v{
-            //.pos = { attrib.vertices[index.vertex_index * 3], -attrib.vertices[index.vertex_index * 3 + 1], attrib.vertices[index.vertex_index * 3 + 2] },
-            //.normal = { attrib.normals[index.normal_index * 3], -attrib.normals[index.normal_index * 3 + 1], attrib.normals[index.normal_index * 3 + 2] },
-            //.uv = { attrib.texcoords[index.texcoord_index * 2], 1.0 - attrib.texcoords[index.texcoord_index * 2 + 1] }
-        //};
-        //vertices.push_back(v);
-        //indices.push_back(indices.size());
-    //}
-
-    //m_vkBufSize = sizeof(Vertex) * vertices.size();
-    //VkDeviceSize iBufSize{ sizeof(uint16_t) * indices.size() };
-    //VkBufferCreateInfo bufferCI
-    //{
-        //.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        //.size = m_vkBufSize + iBufSize,
-        //.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
-    //};
-
-    //VmaAllocationCreateInfo vBufferAllocationCI
-    //{
-        //.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-                 //| VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
-                 //| VMA_ALLOCATION_CREATE_MAPPED_BIT,
-        //.usage = VMA_MEMORY_USAGE_AUTO
-    //};
-    //VmaAllocationInfo vBufferAllocationInfo{};
-    //vkResult = vmaCreateBuffer(
-        //m_vmaAllocator,
-        //&bufferCI,
-        //&vBufferAllocationCI,
-        //&m_vkBuffer,
-        //&m_vmaBufferAllocation,
-        //&vBufferAllocationInfo
-    //);
-    //RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
-    //memcpy(vBufferAllocationInfo.pMappedData, vertices.data(), m_vkBufSize);
-    //memcpy(((char*)vBufferAllocationInfo.pMappedData) + m_vkBufSize, indices.data(), iBufSize);
+    VmaAllocationCreateInfo vBufferAllocationCI
+    {
+        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+                 | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
+                 | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO
+    };
+    VmaAllocationInfo vBufferAllocationInfo{};
+    vkResult = vmaCreateBuffer(
+        m_vmaAllocator,
+        &bufferCI,
+        &vBufferAllocationCI,
+        &m_playerSpaceship.buffer,
+        &m_playerSpaceship.vmaBufferAllocation,
+        &vBufferAllocationInfo
+    );
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
+    memcpy(vBufferAllocationInfo.pMappedData, m_playerSpaceship.vertices.data(), vkBufSize);
+    memcpy(((char*)vBufferAllocationInfo.pMappedData) + vkBufSize, m_playerSpaceship.vertexIndices.data(), iBufSize);
     }
 
     { /* Parallelism. */
-    //for (uint32_t i = 0; i < m_maxFramesInFlight; ++i)
-    //{
-        //VkBufferCreateInfo uBufferCI
-        //{
-            //.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            //.size = sizeof(ShaderData),
-            //.usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-        //};
-        //VmaAllocationCreateInfo uBufferAllocCI
-        //{
-            //.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-                        //| VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
-                        //| VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            //.usage = VMA_MEMORY_USAGE_AUTO
-        //};
-        //vkResult = vmaCreateBuffer(
-            //m_vmaAllocator,
-            //&uBufferCI,
-            //&uBufferAllocCI,
-            //&m_shaderDataBuffers[i].buffer,
-            //&m_shaderDataBuffers[i].allocation,
-            //&m_shaderDataBuffers[i].allocationInfo
-        //);
-        //RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
+    for (uint32_t i = 0; i < m_maxFramesInFlight; ++i)
+    {
+        VkBufferCreateInfo uBufferCI
+        {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .size = sizeof(PlayerShaderData),
+            .usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+        };
+        VmaAllocationCreateInfo uBufferAllocCI
+        {
+            .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+                        | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
+                        | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO
+        };
+        vkResult = vmaCreateBuffer(
+            m_vmaAllocator,
+            &uBufferCI,
+            &uBufferAllocCI,
+            &m_shaderDataBuffers[i].buffer,
+            &m_shaderDataBuffers[i].allocation,
+            &m_shaderDataBuffers[i].allocationInfo
+        );
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
 
-        //VkBufferDeviceAddressInfo uBufferBdaInfo
-        //{
-            //.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-            //.buffer = m_shaderDataBuffers[i].buffer
-        //};
-        //m_shaderDataBuffers[i].deviceAddress = vkGetBufferDeviceAddress(m_vkDevice, &uBufferBdaInfo);
-    //}
+        VkBufferDeviceAddressInfo uBufferBdaInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+            .buffer = m_shaderDataBuffers[i].buffer
+        };
+        m_shaderDataBuffers[i].deviceAddress = vkGetBufferDeviceAddress(m_vkDevice, &uBufferBdaInfo);
 
+    }
+    
     VkFenceCreateInfo fenceCI
     {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -468,23 +438,23 @@ bool SpaceInvadersGame::InitVulkan()
     }
 
     { /* Command buffers. */
-        VkCommandPoolCreateInfo commandPoolCI
-        {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = queueFamily
-        };
-        vkResult = vkCreateCommandPool(m_vkDevice, &commandPoolCI, nullptr, &m_vkCommandPool);
-        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create command buffer pool", vkResult);
+    VkCommandPoolCreateInfo commandPoolCI
+    {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = queueFamily
+    };
+    vkResult = vkCreateCommandPool(m_vkDevice, &commandPoolCI, nullptr, &m_vkCommandPool);
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create command buffer pool", vkResult);
 
-        VkCommandBufferAllocateInfo commandBufferAllocateCI
-        {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .commandPool = m_vkCommandPool,
-            .commandBufferCount = m_maxFramesInFlight
-        };
-        vkResult = vkAllocateCommandBuffers(m_vkDevice, &commandBufferAllocateCI, m_vkCommandBuffers.data());
-        RETURN_FALSE_ON_FAIL_VULKAN("Failed to allocate command buffers", vkResult);
+    VkCommandBufferAllocateInfo commandBufferAllocateCI
+    {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = m_vkCommandPool,
+        .commandBufferCount = m_maxFramesInFlight
+    };
+    vkResult = vkAllocateCommandBuffers(m_vkDevice, &commandBufferAllocateCI, m_vkCommandBuffers.data());
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to allocate command buffers", vkResult);
     }
 
     { /* Textures. */
@@ -924,13 +894,33 @@ bool SpaceInvadersGame::InitVulkan()
 bool SpaceInvadersGame::InitObjects()
 {
     m_playerSpaceship.position = glm::vec3(0.0f);
+    m_camera.position = glm::vec3(0.0f, 0.0f, -6.0f);
 
     return true;
 }
 
+bool SpaceInvadersGame::CheckSwapchain(VkResult result)
+{
+    if (result >= VK_SUCCESS)
+    {
+        return true;
+    }
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        m_updateSwapchain = true;
+        return true;
+    }
+
+    std::cerr << "Vulkan swapchain call failed. Error " << result << "\n";
+    return false;
+}
+
 bool SpaceInvadersGame::Run()
 {
+    VkResult vkResult;
     bool quit{ false };
+
     while (!quit)
     {
         for (SDL_Event event; SDL_PollEvent(&event);)
@@ -942,7 +932,198 @@ bool SpaceInvadersGame::Run()
                 break;
             }
 
+            { /* Handle user input. */}
 
+            { /* Render. */
+            { /* Wait on fence. */
+            vkResult = vkWaitForFences(m_vkDevice, 1, &m_vkFences[m_frameIndex], true, UINT64_MAX);
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to wait for fence", vkResult);
+            vkResult = vkResetFences(m_vkDevice, 1, &m_vkFences[m_frameIndex]);
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to reset fence", vkResult);
+            }
+
+            { /* Acquire next image. */
+            vkResult = vkAcquireNextImageKHR(
+                m_vkDevice,
+                m_vkSwapchain,
+                UINT64_MAX,
+                m_vkImageAcquiredSemaphores[m_frameIndex],
+                VK_NULL_HANDLE,
+                &m_imageIndex
+            ); 
+            if (!CheckSwapchain(vkResult))
+            {
+                return false;
+            }
+            }
+            { /* Update shader data. */ 
+            m_playerShaderData.view = glm::translate(glm::mat4(1.0f), m_camera.position);
+            m_playerShaderData.model = glm::translate(glm::mat4(1.0f), m_playerSpaceship.position);
+            memcpy(m_shaderDataBuffers[m_frameIndex].allocationInfo.pMappedData, &m_playerShaderData, sizeof(PlayerShaderData));
+            }
+
+            auto cb = m_vkCommandBuffers[m_frameIndex];
+            { /* Record command buffer. */
+            vkResult = vkResetCommandBuffer(cb, 0);
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to reset command buffer", vkResult);
+
+            VkCommandBufferBeginInfo cbBI
+            {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+            };
+            vkResult = vkBeginCommandBuffer(cb, &cbBI);
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to begin command buffer", vkResult);
+
+            std::array<VkImageMemoryBarrier2, 2> outputBarriers
+            {
+                VkImageMemoryBarrier2
+                {
+                    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+                    .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .srcAccessMask = 0,
+                    .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                    .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                    .image = m_vkSwapchainImages[m_imageIndex],
+                    .subresourceRange{
+                        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                        .levelCount = 1,
+                        .layerCount = 1
+                    }
+                },
+                VkImageMemoryBarrier2
+                {
+                    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+                    .srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
+                    .srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT,
+                    .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                    .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                    .newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                    .image = m_vkDepthImage,
+                    .subresourceRange{
+                        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+                        .levelCount = 1,
+                        .layerCount = 1
+                    }
+                }
+            };
+            VkDependencyInfo barrierDependencyInfo
+            {
+                .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+                .imageMemoryBarrierCount = static_cast<uint32_t>(outputBarriers.size()),
+                .pImageMemoryBarriers = outputBarriers.data()
+            };
+            vkCmdPipelineBarrier2(cb, &barrierDependencyInfo);
+
+            VkRenderingAttachmentInfo colorAttachmentInfo
+            {
+                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+                .imageView = m_vkSwapchainImageViews[m_imageIndex],
+                .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                .clearValue{ .color{ 0.0f, 0.0f, 0.2f, 1.0f }}
+            };
+            VkRenderingAttachmentInfo depthAttachmentInfo
+            {
+                .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+                .imageView = m_vkDepthImageView,
+                .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .clearValue = { .depthStencil = { 1.0f, 0 } }
+            };
+
+            VkRenderingInfo renderingInfo
+            {
+                .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+                .renderArea{
+                    .extent {
+                        .width = static_cast<uint32_t>(m_windowWidth),
+                        .height = static_cast<uint32_t>(m_windowHeight)
+                    }
+                },
+                .layerCount = 1,
+                .colorAttachmentCount = 1,
+                .pColorAttachments = &colorAttachmentInfo,
+                .pDepthAttachment = &depthAttachmentInfo
+            };
+            vkCmdBeginRendering(cb, &renderingInfo);
+
+            VkViewport vp
+            {
+                .width = static_cast<float>(m_windowWidth),
+                .height = static_cast<float>(m_windowHeight),
+                .minDepth = 0.0f,
+                .maxDepth = 1.0f
+            };
+            vkCmdSetViewport(cb, 0, 1, &vp);
+            VkRect2D scissor
+            {
+                .extent{
+                    .width = static_cast<uint32_t>(m_windowWidth),
+                    .height = static_cast<uint32_t>(m_windowHeight)
+                }
+            };
+            vkCmdSetScissor(cb, 0, 1, &scissor);
+
+            vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vkPipeline);
+            VkDeviceSize vOffset{ 0 };
+            vkCmdBindDescriptorSets(
+                cb,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                m_vkPipelineLayout,
+                0,
+                1,
+                &m_vkDescriptorSetTex,
+                0,
+                nullptr
+            );
+            vkCmdBindVertexBuffers(cb, 0, 1, &m_playerSpaceship.buffer, &vOffset);
+            vkCmdBindIndexBuffer(cb, m_playerSpaceship.buffer, sizeof(Vertex) * Sprite::NUM_VERTICES, VK_INDEX_TYPE_UINT16);
+
+            vkCmdPushConstants(
+                cb,
+                m_vkPipelineLayout,
+                VK_SHADER_STAGE_VERTEX_BIT,
+                0,
+                sizeof(VkDeviceAddress),
+                &m_shaderDataBuffers[m_frameIndex].deviceAddress
+            );
+
+            vkCmdDrawIndexed(cb, 6, 3, 0, 0, 0);
+            vkCmdEndRendering(cb);
+
+            VkImageMemoryBarrier2 barrierPresent
+            {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+                .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dstAccessMask = 0,
+                .oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+                .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                .image = m_vkSwapchainImages[m_imageIndex],
+                .subresourceRange{
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .levelCount = 1,
+                    .layerCount = 1
+                }
+            };
+            VkDependencyInfo barrierPresentDependencyInfo
+            {
+                .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+                .imageMemoryBarrierCount = 1,
+                .pImageMemoryBarriers = &barrierPresent
+            };
+            vkCmdPipelineBarrier2(cb, &barrierPresentDependencyInfo);
+
+            vkEndCommandBuffer(cb);
+            }
+            }
         }
     }
     

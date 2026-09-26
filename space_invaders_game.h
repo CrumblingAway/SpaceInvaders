@@ -6,12 +6,35 @@
 
 class SDL_Window;
 
-struct Texture
+struct Vertex
 {
+    glm::vec3 pos;
+    glm::vec3 normal;
+    glm::vec2 uv;
+};
+
+struct Sprite
+{
+    static constexpr uint32_t NUM_VERTICES = 4;
+
     VkImage image{ VK_NULL_HANDLE };
     VkImageView imageView{ VK_NULL_HANDLE };
     VmaAllocation imageAllocation{ VK_NULL_HANDLE };
     VkSampler sampler{ VK_NULL_HANDLE };
+};
+
+struct PlayerShaderData
+{
+    glm::mat4 view;
+    glm::mat4 model;
+};
+
+struct PlayerShaderBuffer
+{
+    VkBuffer buffer{ VK_NULL_HANDLE };
+    VmaAllocation allocation{ VK_NULL_HANDLE };
+    VmaAllocationInfo allocationInfo{};
+    VkDeviceAddress deviceAddress{};
 };
 
 class Shape
@@ -19,10 +42,42 @@ class Shape
 
 };
 
+struct Camera
+{
+    glm::vec3 position;
+};
+
 struct PlayerSpaceship
 {
     /* Rendering. */
-    Texture sprite;
+    Sprite sprite;
+    VkBuffer buffer{ VK_NULL_HANDLE };
+    VmaAllocation vmaBufferAllocation{ VK_NULL_HANDLE };
+
+    std::array<Vertex, 4> vertices
+    {{
+        {
+            glm::vec3(-10.0f, -10.0f, 0.0f),
+            glm::vec3(0.0f, 0.0f, -1.0f),
+            glm::vec2(0.0f, 0.0f)
+        },
+        {
+            .pos = glm::vec3(-10.0f, 10.0f, 0.0f),
+            .normal = glm::vec3(0.0f, 0.0f, -1.0f),
+            .uv = glm::vec2(0.0f, 1.0f)
+        },
+        {
+            .pos = glm::vec3(10.0f, 10.0f, 0.0f),
+            .normal = glm::vec3(0.0f, 0.0f, -1.0f),
+            .uv = glm::vec2(1.0f, 0.0f)
+        },
+        {
+            .pos = glm::vec3(10.0f, -10.0f, 0.0f),
+            .normal = glm::vec3(0.0f, 0.0f, -1.0f),
+            .uv = glm::vec2(1.0f, 1.0f)
+        }
+    }};
+    std::array<uint32_t, 6> vertexIndices{ 0, 1, 2, 0, 2, 3 };
 
     /* Logic. */
     glm::vec3 position;
@@ -75,6 +130,9 @@ private:
      */
     bool Destroy();
 
+    bool CheckSwapchain(VkResult result);
+    bool m_updateSwapchain = true;
+
     const char* m_pApplicationName = "Space Invaders";
 
     const size_t m_windowHeight = 720u;
@@ -100,6 +158,10 @@ private:
     VkShaderModule m_vkShaderModule{};
     VkPipeline m_vkPipeline{ VK_NULL_HANDLE };
     VkPipelineLayout m_vkPipelineLayout{ VK_NULL_HANDLE };
+    PlayerShaderData m_playerShaderData;
+    std::array<PlayerShaderBuffer, m_maxFramesInFlight> m_shaderDataBuffers;
+    uint32_t m_imageIndex{ 0 };
+    uint32_t m_frameIndex{ 0 };
 
     VkDescriptorSetLayout m_vkDescriptorSetLayoutTex{ VK_NULL_HANDLE };
     VkDescriptorSet m_vkDescriptorSetTex{ VK_NULL_HANDLE };
@@ -113,4 +175,5 @@ private:
     std::vector<VkSemaphore> m_vkRenderCompleteSemaphores;
 
     PlayerSpaceship m_playerSpaceship;
+    Camera m_camera;
 };
