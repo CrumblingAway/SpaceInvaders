@@ -1192,16 +1192,60 @@ bool SpaceInvadersGame::CleanupSDL()
 
 bool SpaceInvadersGame::CleanupVulkan()
 {
+    for (auto i = 0; i < m_maxFramesInFlight; ++i)
+    {
+        vkDestroyFence(m_vkDevice, m_vkFences[i], nullptr);
+        vkDestroySemaphore(m_vkDevice, m_vkImageAcquiredSemaphores[i], nullptr);
+        vmaDestroyBuffer(
+            m_vmaAllocator,
+            m_shaderDataBuffers[i].buffer,
+            m_shaderDataBuffers[i].allocation
+        );
+    }
+
+    for (auto i = 0; i < m_vkRenderCompleteSemaphores.size(); ++i)
+    {
+        vkDestroySemaphore(m_vkDevice, m_vkRenderCompleteSemaphores[i], nullptr);
+    }
+
+    vmaDestroyImage(m_vmaAllocator, m_vkDepthImage, m_vmaDepthImageAllocation);
+    vkDestroyImageView(m_vkDevice, m_vkDepthImageView, nullptr);
+    for (auto i = 0; i < m_vkSwapchainImageViews.size(); ++i)
+    {
+        vkDestroyImageView(m_vkDevice, m_vkSwapchainImageViews[i], nullptr);
+    }
+    
+    vkDestroyDescriptorSetLayout(m_vkDevice, m_vkDescriptorSetLayoutTex, nullptr);
+    vkDestroyDescriptorPool(m_vkDevice, m_vkDescriptorPool, nullptr);
+    vkDestroyPipelineLayout(m_vkDevice, m_vkPipelineLayout, nullptr);
+    vkDestroyPipeline(m_vkDevice, m_vkPipeline, nullptr);
+    vkDestroySwapchainKHR(m_vkDevice, m_vkSwapchain, nullptr);
+    vkDestroySurfaceKHR(m_vkInstance, m_vkSurface, nullptr);
+    vkDestroyCommandPool(m_vkDevice, m_vkCommandPool, nullptr);
+    vkDestroyShaderModule(m_vkDevice, m_vkShaderModule, nullptr);
+    vmaDestroyAllocator(m_vmaAllocator);
+    vkDestroyDevice(m_vkDevice, nullptr);
+    vkDestroyInstance(m_vkInstance, nullptr);
+
     return true;
 }
 
 bool SpaceInvadersGame::CleanupObjects()
 {
+    /* Cleanup player. */
+    vmaDestroyBuffer(m_vmaAllocator, m_playerSpaceship.buffer, m_playerSpaceship.vmaBufferAllocation);
+    vkDestroyImageView(m_vkDevice, m_playerSpaceship.sprite.imageView, nullptr);
+    vmaDestroyImage(m_vmaAllocator, m_playerSpaceship.sprite.image, m_playerSpaceship.sprite.imageAllocation);
+    vkDestroySampler(m_vkDevice, m_playerSpaceship.sprite.sampler, nullptr);
+
     return true;
 }
 
 bool SpaceInvadersGame::Destroy()
 {
+    VkResult vkResult = vkDeviceWaitIdle(m_vkDevice);
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to wait for device idle", vkResult);
+
     return CleanupObjects()
            && CleanupVulkan()
            && CleanupSDL();
