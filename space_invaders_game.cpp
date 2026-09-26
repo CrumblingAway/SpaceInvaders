@@ -227,7 +227,7 @@ bool SpaceInvadersGame::InitVulkan()
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to get physical device surface capabilities", vkResult);
     }
 
-    const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
+    const VkFormat imageFormat{ VK_FORMAT_R8G8B8A8_SRGB };
     { /* Swapchain. */
     VkExtent2D swapchainExtent{ m_surfaceCapabilities.currentExtent };
     if (m_surfaceCapabilities.currentExtent.width == 0xFFFFFFFF)
@@ -475,7 +475,7 @@ bool SpaceInvadersGame::InitVulkan()
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
-        .format = VK_FORMAT_B8G8R8A8_SRGB,
+        .format = VK_FORMAT_R8G8B8A8_SRGB,
         .extent = {
             .width = static_cast<uint32_t>(ss_width),
             .height = static_cast<uint32_t>(ss_height),
