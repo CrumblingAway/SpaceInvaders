@@ -587,6 +587,27 @@ bool SpaceInvadersGame::InitVulkan()
     };
     vkCmdPipelineBarrier2(cbOneTime, &barrierTexInfo);
     std::vector<VkBufferImageCopy> copyRegions{};
+    copyRegions.push_back({
+        .bufferOffset = 0,
+        .imageSubresource{
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0u,
+            .layerCount = 1
+        },
+        .imageExtent{
+            .width = static_cast<uint32_t>(ss_width),
+            .height = static_cast<uint32_t>(ss_height),
+            .depth = 1
+        }
+    });
+    vkCmdCopyBufferToImage(
+        cbOneTime,
+        imgSrcBuffer,
+        m_playerSpaceship.sprite.image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        static_cast<uint32_t>(copyRegions.size()),
+        copyRegions.data()
+    );
     
     VkImageMemoryBarrier2 barrierTexRead
     {
