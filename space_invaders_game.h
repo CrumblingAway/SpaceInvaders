@@ -59,30 +59,31 @@ struct PlayerSpaceship
     std::array<Vertex, 4> vertices
     {{
         {
-            glm::vec3(-10.0f, -10.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, -1.0f),
-            glm::vec2(0.0f, 0.0f)
+            .pos = scale * glm::vec3(-10.0f, -10.0f, 0.0f),
+            .normal = glm::vec3(0.0f, 0.0f, -1.0f),
+            .uv = glm::vec2(0.0f, 0.0f)
         },
         {
-            .pos = glm::vec3(-10.0f, 10.0f, 0.0f),
+            .pos = scale * glm::vec3(-10.0f, 10.0f, 0.0f),
             .normal = glm::vec3(0.0f, 0.0f, -1.0f),
             .uv = glm::vec2(0.0f, 1.0f)
         },
         {
-            .pos = glm::vec3(10.0f, 10.0f, 0.0f),
+            .pos = scale * glm::vec3(10.0f, 10.0f, 0.0f),
             .normal = glm::vec3(0.0f, 0.0f, -1.0f),
             .uv = glm::vec2(1.0f, 0.0f)
         },
         {
-            .pos = glm::vec3(10.0f, -10.0f, 0.0f),
+            .pos = scale * glm::vec3(10.0f, -10.0f, 0.0f),
             .normal = glm::vec3(0.0f, 0.0f, -1.0f),
             .uv = glm::vec2(1.0f, 1.0f)
         }
     }};
-    std::array<uint32_t, 6> vertexIndices{ 0, 1, 2, 0, 2, 3 };
+    std::array<uint32_t, 6> vertexIndices{ 0, 2, 1, 0, 2, 3 };
 
     /* Logic. */
     glm::vec3 position;
+    float scale = 10.0f;
     Shape hitbox;
 };
 
