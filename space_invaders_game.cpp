@@ -15,6 +15,8 @@
     std::cerr << "SDL: " << text << ". Error " << SDL_GetError() << ".\n";
 #define PRINT_VULKAN_CRITICAL_ERROR(text, error_enum)\
     std::cerr << "Vulkan: " << text << ". Error " << error_enum << ".\n";
+#define PRINT_STBI_CRITICAL_ERROR(text)\
+    std::cerr << "STBI: " << text << "\n";
 
 #define RETURN_FALSE_ON_FAIL_VULKAN(text, error_num)\
     if (error_num != VK_SUCCESS)\
@@ -461,7 +463,12 @@ bool SpaceInvadersGame::InitVulkan()
     std::vector<VkDescriptorImageInfo> textureDescriptors{};
 
     int ss_width, ss_height, ss_channels;
-    unsigned char* spaceship_image = stbi_load("assets/player_spaceship.png", &ss_width, &ss_height, &ss_channels, 0);
+    unsigned char* spaceship_image = stbi_load("assets/test_512x512_rgba_image.jpg", &ss_width, &ss_height, &ss_channels, 0);
+    if (!spaceship_image)
+    {
+        PRINT_STBI_CRITICAL_ERROR(stbi_failure_reason());
+        return false;
+    }
     const int size_in_bytes = ss_width * ss_height * ss_channels;
 
     VkImageCreateInfo texImgCI
