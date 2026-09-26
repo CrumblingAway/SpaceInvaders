@@ -986,6 +986,12 @@ bool SpaceInvadersGame::Run()
         }
         }
         { /* Update shader data. */ 
+        m_playerShaderData.projection = glm::perspective(
+            glm::radians(45.0f),
+            (float)m_windowWidth / (float) m_windowHeight,
+            0.1f,
+            32.0f
+        );
         m_playerShaderData.view = glm::translate(glm::mat4(1.0f), m_camera.position);
         m_playerShaderData.model = glm::translate(glm::mat4(1.0f), m_playerSpaceship.position);
         memcpy(m_shaderDataBuffers[m_frameIndex].allocationInfo.pMappedData, &m_playerShaderData, sizeof(PlayerShaderData));

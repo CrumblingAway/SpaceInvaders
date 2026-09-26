@@ -7,6 +7,7 @@ struct VSInput {
 Sampler2D texture;
 
 struct ShaderData {
+    float4x4 projection;
     float4x4 view;
     float4x4 model;
 };
@@ -25,7 +26,7 @@ VSOutput main(
     VSOutput output;
     float4x4 modelMat = shaderData.model;
     output.UV = input.UV;
-    output.Pos = mul(shaderData->view, mul(modelMat, float4(input.Pos.xyz, 1.0)));
+    output.Pos = mul(shaderData->projection, mul(shaderData->view, mul(modelMat, float4(input.Pos.xyz, 1.0))));
     return output;
 }
 

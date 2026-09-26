@@ -27,6 +27,7 @@ struct Sprite
 
 struct PlayerShaderData
 {
+    glm::mat4 projection;
     glm::mat4 view;
     glm::mat4 model;
 };
@@ -56,6 +57,7 @@ struct PlayerSpaceship
     VkBuffer buffer{ VK_NULL_HANDLE };
     VmaAllocation vmaBufferAllocation{ VK_NULL_HANDLE };
 
+    float scale = 0.1f;
     std::array<Vertex, 4> vertices
     {{
         {
@@ -79,11 +81,10 @@ struct PlayerSpaceship
             .uv = glm::vec2(1.0f, 1.0f)
         }
     }};
-    std::array<uint32_t, 6> vertexIndices{ 0, 2, 1, 0, 2, 3 };
+    std::array<uint16_t, 6> vertexIndices{ 0, 2, 1, 0, 2, 3 };
 
     /* Logic. */
     glm::vec3 position;
-    float scale = 10.0f;
     Shape hitbox;
 };
 
