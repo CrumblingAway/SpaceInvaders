@@ -1123,6 +1123,57 @@ bool SpaceInvadersGame::Run()
 
             vkEndCommandBuffer(cb);
             }
+
+            { /* Submit command buffer. */
+            VkSemaphoreSubmitInfo waitSemaphoreInfo
+            {
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                .semaphore = m_vkImageAcquiredSemaphores[m_frameIndex],
+                .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
+            };
+            VkCommandBufferSubmitInfo commandBufferSubmitInfo
+            {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+                .commandBuffer = cb
+            };
+            VkSemaphoreSubmitInfo signalSemaphoreInfo
+            {
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+                .semaphore = m_vkRenderCompleteSemaphores[m_imageIndex],
+                .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT
+            };
+            VkSubmitInfo2 submitInfo
+            {
+                .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+                .waitSemaphoreInfoCount = 1,
+                .pWaitSemaphoreInfos = &waitSemaphoreInfo,
+                .commandBufferInfoCount = 1,
+                .pCommandBufferInfos = &commandBufferSubmitInfo,
+                .signalSemaphoreInfoCount = 1,
+                .pSignalSemaphoreInfos = &signalSemaphoreInfo
+            };
+            vkResult = vkQueueSubmit2(m_vkQueue, 1, &submitInfo, m_vkFences[m_frameIndex]);
+            RETURN_FALSE_ON_FAIL_VULKAN("Failed to submit queue", vkResult);
+
+            m_frameIndex = (m_frameIndex + 1) % m_maxFramesInFlight;
+            }
+
+            { /* Present image. */
+            VkPresentInfoKHR presentInfo
+            {
+                .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                .waitSemaphoreCount = 1,
+                .pWaitSemaphores = &m_vkRenderCompleteSemaphores[m_imageIndex],
+                .swapchainCount = 1,
+                .pSwapchains = &m_vkSwapchain,
+                .pImageIndices = &m_imageIndex
+            };
+            vkResult = vkQueuePresentKHR(m_vkQueue, &presentInfo);
+            if (!CheckSwapchain(vkResult))
+            {
+                return false;
+            }
+            }
             }
         }
     }
