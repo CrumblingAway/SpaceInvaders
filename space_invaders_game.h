@@ -73,15 +73,15 @@ struct PlayerSpaceship
         {
             .pos = scale * glm::vec3(10.0f, 10.0f, 0.0f),
             .normal = glm::vec3(0.0f, 0.0f, -1.0f),
-            .uv = glm::vec2(1.0f, 0.0f)
+            .uv = glm::vec2(1.0f, 1.0f)
         },
         {
             .pos = scale * glm::vec3(10.0f, -10.0f, 0.0f),
             .normal = glm::vec3(0.0f, 0.0f, -1.0f),
-            .uv = glm::vec2(1.0f, 1.0f)
+            .uv = glm::vec2(1.0f, 0.0f)
         }
     }};
-    std::array<uint16_t, 6> vertexIndices{ 0, 2, 1, 0, 2, 3 };
+    std::array<uint16_t, 6> vertexIndices{ 0, 1, 2, 0, 2, 3 };
 
     /* Logic. */
     glm::vec3 position;
