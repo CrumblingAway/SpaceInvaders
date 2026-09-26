@@ -1054,7 +1054,7 @@ bool SpaceInvadersGame::Run()
             .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-            .clearValue{ .color{ 0.0f, 0.0f, 0.2f, 1.0f }}
+            .clearValue{ .color{ 0.0f, 0.0f, 0.0f, 1.0f }}
         };
         VkRenderingAttachmentInfo depthAttachmentInfo
         {
