@@ -1,9 +1,13 @@
-#include "space_invaders_renderer.h"
+#include "space_invaders_game.h"
 
 int main()
 {
-    SpaceInadersRenderer spaceInvadersGame;
-    spaceInvadersGame.Run();
+    SpaceInvadersGame game;
+    if (!game.Init())
+    {
+        return 1;
+    }
+    game.Run();
 
     return 0;
 }
