@@ -364,18 +364,30 @@ bool SpaceInvadersGame::InitVulkan()
                  | VMA_ALLOCATION_CREATE_MAPPED_BIT,
         .usage = VMA_MEMORY_USAGE_AUTO
     };
-    VmaAllocationInfo vBufferAllocationInfo{};
+    VmaAllocationInfo vPlayerBufferAllocationInfo{};
     vkResult = vmaCreateBuffer(
         m_vmaAllocator,
         &bufferCI,
         &vBufferAllocationCI,
         &m_playerSpaceship.buffer,
         &m_playerSpaceship.vmaBufferAllocation,
-        &vBufferAllocationInfo
+        &vPlayerBufferAllocationInfo
     );
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
-    memcpy(vBufferAllocationInfo.pMappedData, m_playerSpaceship.vertices.data(), vkBufSize);
-    memcpy(((char*)vBufferAllocationInfo.pMappedData) + vkBufSize, m_playerSpaceship.vertexIndices.data(), iBufSize);
+    memcpy(vPlayerBufferAllocationInfo.pMappedData, m_playerSpaceship.vertices.data(), vkBufSize);
+    memcpy(((char*)vPlayerBufferAllocationInfo.pMappedData) + vkBufSize, m_playerSpaceship.vertexIndices.data(), iBufSize);
+    VmaAllocationInfo vEnemyBufferAllocationInfo{};
+    vkResult = vmaCreateBuffer(
+        m_vmaAllocator,
+        &bufferCI,
+        &vBufferAllocationCI,
+        &m_enemySpaceship.buffer,
+        &m_enemySpaceship.vmaBufferAllocation,
+        &vEnemyBufferAllocationInfo
+    );
+    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
+    memcpy(vEnemyBufferAllocationInfo.pMappedData, m_enemySpaceship.vertices.data(), vkBufSize);
+    memcpy(((char*)vEnemyBufferAllocationInfo.pMappedData) + vkBufSize, m_enemySpaceship.vertexIndices.data(), iBufSize);
     }
 
     { /* Parallelism. */
@@ -921,6 +933,8 @@ bool SpaceInvadersGame::InitVulkan()
 bool SpaceInvadersGame::InitObjects()
 {
     m_playerSpaceship.position = glm::vec3(0.0f);
+    m_enemySpaceship.position = glm::vec3(0.0f, 5.0f, 0.0f);
+
     m_camera.position = glm::vec3(0.0f, 0.0f, -6.0f);
 
     return true;
@@ -1322,6 +1336,11 @@ bool SpaceInvadersGame::CleanupObjects()
     vkDestroyImageView(m_vkDevice, m_playerSpaceship.sprite.imageView, nullptr);
     vmaDestroyImage(m_vmaAllocator, m_playerSpaceship.sprite.image, m_playerSpaceship.sprite.imageAllocation);
     vkDestroySampler(m_vkDevice, m_playerSpaceship.sprite.sampler, nullptr);
+    
+    vmaDestroyBuffer(m_vmaAllocator, m_enemySpaceship.buffer, m_enemySpaceship.vmaBufferAllocation);
+    vkDestroyImageView(m_vkDevice, m_enemySpaceship.sprite.imageView, nullptr);
+    vmaDestroyImage(m_vmaAllocator, m_enemySpaceship.sprite.image, m_enemySpaceship.sprite.imageAllocation);
+    vkDestroySampler(m_vkDevice, m_enemySpaceship.sprite.sampler, nullptr);
 
     return true;
 }

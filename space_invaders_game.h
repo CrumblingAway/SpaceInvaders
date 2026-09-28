@@ -85,6 +85,42 @@ struct PlayerSpaceship
     Shape hitbox;
 };
 
+struct EnemySpaceship
+{
+    /* Rendering. */
+    Sprite sprite;
+    VkBuffer buffer{ VK_NULL_HANDLE };
+    VmaAllocation vmaBufferAllocation{ VK_NULL_HANDLE };
+
+    float scale = 0.01f;
+    std::array<Vertex, 4> vertices
+    {{
+        {
+            .pos = scale * glm::vec3(-10.0f, -10.0f, 0.0f),
+            .uv = glm::vec2(0.0f, 0.0f)
+        },
+        {
+            .pos = scale * glm::vec3(-10.0f, 10.0f, 0.0f),
+            .uv = glm::vec2(0.0f, 1.0f)
+        },
+        {
+            .pos = scale * glm::vec3(10.0f, 10.0f, 0.0f),
+            .uv = glm::vec2(1.0f, 1.0f)
+        },
+        {
+            .pos = scale * glm::vec3(10.0f, -10.0f, 0.0f),
+            .uv = glm::vec2(1.0f, 0.0f)
+        }
+    }};
+    std::array<uint16_t, 6> vertexIndices{ 0, 1, 2, 0, 2, 3 };
+    
+    /* Logic. */
+    glm::vec3 position;
+    glm::vec3 velocity = glm::vec3(0.0f, 0.0f, 0.0f);
+    float speed = 0.1f;
+    Shape hitbox;
+};
+
 class SpaceInvadersGame
 {
 public:
@@ -176,5 +212,6 @@ private:
     std::vector<VkSemaphore> m_vkRenderCompleteSemaphores;
 
     PlayerSpaceship m_playerSpaceship;
+    EnemySpaceship m_enemySpaceship;
     Camera m_camera;
 };
