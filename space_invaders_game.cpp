@@ -804,8 +804,7 @@ bool SpaceInvadersGame::InitVulkan()
 
     std::vector<VkVertexInputAttributeDescription> vertexAttributes{
         { .location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT },
-        { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex, normal) },
-        { .location = 2, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = offsetof(Vertex, uv) },
+        { .location = 1, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset = offsetof(Vertex, uv) },
     };
 
     VkPipelineVertexInputStateCreateInfo vertexInputState

@@ -1,6 +1,5 @@
 struct VSInput {
     float3 Pos;
-    float3 Normal;
 	float2 UV;
 };
 

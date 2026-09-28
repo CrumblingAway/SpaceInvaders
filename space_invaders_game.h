@@ -11,7 +11,6 @@ class SDL_Window;
 struct Vertex
 {
     glm::vec3 pos;
-    glm::vec3 normal;
     glm::vec2 uv;
 };
 
@@ -62,22 +61,18 @@ struct PlayerSpaceship
     {{
         {
             .pos = scale * glm::vec3(-10.0f, -10.0f, 0.0f),
-            .normal = glm::vec3(0.0f, 0.0f, -1.0f),
             .uv = glm::vec2(0.0f, 0.0f)
         },
         {
             .pos = scale * glm::vec3(-10.0f, 10.0f, 0.0f),
-            .normal = glm::vec3(0.0f, 0.0f, -1.0f),
             .uv = glm::vec2(0.0f, 1.0f)
         },
         {
             .pos = scale * glm::vec3(10.0f, 10.0f, 0.0f),
-            .normal = glm::vec3(0.0f, 0.0f, -1.0f),
             .uv = glm::vec2(1.0f, 1.0f)
         },
         {
             .pos = scale * glm::vec3(10.0f, -10.0f, 0.0f),
-            .normal = glm::vec3(0.0f, 0.0f, -1.0f),
             .uv = glm::vec2(1.0f, 0.0f)
         }
     }};
