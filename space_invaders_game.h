@@ -80,6 +80,8 @@ struct PlayerSpaceship
 
     /* Logic. */
     glm::vec3 position;
+    glm::vec3 velocity = glm::vec3(0.0f, 0.0f, 0.0f);
+    float speed = 0.1f;
     Shape hitbox;
 };
 
