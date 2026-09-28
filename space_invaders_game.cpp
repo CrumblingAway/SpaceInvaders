@@ -473,268 +473,309 @@ bool SpaceInvadersGame::InitVulkan()
 
     { /* Textures. */
     std::vector<VkDescriptorImageInfo> textureDescriptors{};
-
-    int ss_width, ss_height, ss_channels;
-    unsigned char* spaceship_image = stbi_load("assets/player_spaceship.png", &ss_width, &ss_height, &ss_channels, 0);
-    if (!spaceship_image)
+    auto load_texture = [
+        &textureDescriptors,
+        &vkDevice = m_vkDevice,
+        &vkQueue = m_vkQueue,
+        &vkCommandPool = m_vkCommandPool,
+        &vkDescriptorSetLayoutTex = m_vkDescriptorSetLayoutTex,
+        &vkDescriptorSetTex = m_vkDescriptorSetTex,
+        &vkDescriptorPool = m_vkDescriptorPool,
+        &vmaAllocator = m_vmaAllocator
+    ](
+        const char* imagePath,
+        VkImage& vkImage,
+        VkImageView& vkImageView,
+        VkSampler& vkSampler,
+        VmaAllocation& vmaAllocation
+    ) -> bool
     {
-        PRINT_STBI_CRITICAL_ERROR(stbi_failure_reason());
+        VkResult vkResult;
+
+        int ss_width, ss_height, ss_channels;
+        unsigned char* image = stbi_load(imagePath, &ss_width, &ss_height, &ss_channels, 0);
+        if (!image)
+        {
+            PRINT_STBI_CRITICAL_ERROR(stbi_failure_reason());
+            return false;
+        }
+        const int size_in_bytes = ss_width * ss_height * ss_channels;
+
+        VkImageCreateInfo texImgCI
+        {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = VK_FORMAT_R8G8B8A8_SRGB,
+            .extent = {
+                .width = static_cast<uint32_t>(ss_width),
+                .height = static_cast<uint32_t>(ss_height),
+                .depth = 1
+            },
+            .mipLevels = 1,
+            .arrayLayers = 1,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
+        };
+        VmaAllocationCreateInfo texImageAllocationCI{ .usage = VMA_MEMORY_USAGE_AUTO };
+        vkResult = vmaCreateImage(
+            vmaAllocator,
+            &texImgCI,
+            &texImageAllocationCI,
+            &vkImage,
+            &vmaAllocation,
+            nullptr
+        );
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship texture", vkResult);
+        VkImageViewCreateInfo texViewCI
+        {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = vkImage,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = texImgCI.format,
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .levelCount = 1,
+                .layerCount = 1
+            }
+        };
+        vkResult = vkCreateImageView(vkDevice, &texViewCI, nullptr, &vkImageView);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship texture image view", vkResult);
+        VkBuffer imgSrcBuffer{};
+        VmaAllocation imgSrcAllocation{};
+        VkBufferCreateInfo imgSrcBufferCI
+        {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .size = (uint32_t) size_in_bytes,
+            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+        };
+        VmaAllocationCreateInfo imgSrcAllocationCI
+        {
+            .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+                        | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO
+        };
+        VmaAllocationInfo imgSrcAllocationInfo{};
+        vkResult = vmaCreateBuffer(
+            vmaAllocator,
+            &imgSrcBufferCI,
+            &imgSrcAllocationCI,
+            &imgSrcBuffer,
+            &imgSrcAllocation,
+            &imgSrcAllocationInfo
+        );
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship texture buffer", vkResult);
+
+        memcpy(imgSrcAllocationInfo.pMappedData, image, size_in_bytes);
+
+        VkFenceCreateInfo fenceOneTimeCI
+        {
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
+        };
+        VkFence fenceOneTime{};
+        vkResult = vkCreateFence(vkDevice, &fenceOneTimeCI, nullptr, &fenceOneTime);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create OneTime fence", vkResult);
+        VkCommandBuffer cbOneTime{};
+        VkCommandBufferAllocateInfo cbOneTimeAI
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = vkCommandPool,
+            .commandBufferCount = 1
+        };
+        vkResult = vkAllocateCommandBuffers(vkDevice, &cbOneTimeAI, &cbOneTime);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create OneTime command buffer", vkResult);
+
+        VkCommandBufferBeginInfo cbOneTimeBI
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+        };
+        vkResult = vkBeginCommandBuffer(cbOneTime, &cbOneTimeBI);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to begin OneTime command buffer", vkResult);
+        VkImageMemoryBarrier2 barrierTexImage
+        {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .srcStageMask = VK_PIPELINE_STAGE_2_NONE,
+            .srcAccessMask = VK_ACCESS_2_NONE,
+            .dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+            .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .image = vkImage,
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .levelCount = 1,
+                .layerCount = 1
+            }
+        };
+        VkDependencyInfo barrierTexInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .imageMemoryBarrierCount = 1,
+            .pImageMemoryBarriers = &barrierTexImage
+        };
+        vkCmdPipelineBarrier2(cbOneTime, &barrierTexInfo);
+        std::vector<VkBufferImageCopy> copyRegions{};
+        copyRegions.push_back({
+            .bufferOffset = 0,
+            .imageSubresource{
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = 0u,
+                .layerCount = 1
+            },
+            .imageExtent{
+                .width = static_cast<uint32_t>(ss_width),
+                .height = static_cast<uint32_t>(ss_height),
+                .depth = 1
+            }
+        });
+        vkCmdCopyBufferToImage(
+            cbOneTime,
+            imgSrcBuffer,
+            vkImage,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            static_cast<uint32_t>(copyRegions.size()),
+            copyRegions.data()
+        );
+    
+        VkImageMemoryBarrier2 barrierTexRead
+        {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
+            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+            .image = vkImage,
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .levelCount = 1,
+                .layerCount = 1
+            }
+        };
+        barrierTexInfo.pImageMemoryBarriers = &barrierTexRead;
+        vkCmdPipelineBarrier2(cbOneTime, &barrierTexInfo);
+        vkResult = vkEndCommandBuffer(cbOneTime);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to end OneTime command buffer", vkResult);
+        VkCommandBufferSubmitInfo cbOneTimeSubmitInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+            .commandBuffer = cbOneTime
+        };
+        VkSubmitInfo2 oneTimeSI
+        {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+            .commandBufferInfoCount = 1,
+            .pCommandBufferInfos = &cbOneTimeSubmitInfo
+        };
+        vkResult = vkQueueSubmit2(vkQueue, 1, &oneTimeSI, fenceOneTime);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to submit OneTime queue", vkResult);
+        vkResult = vkWaitForFences(vkDevice, 1, &fenceOneTime, VK_TRUE, UINT64_MAX);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to wait for OneTime fence", vkResult);
+
+        vkDestroyFence(vkDevice, fenceOneTime, nullptr);
+        vmaDestroyBuffer(vmaAllocator, imgSrcBuffer, imgSrcAllocation);
+
+        VkSamplerCreateInfo samplerCI
+        {
+            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+            .magFilter = VK_FILTER_NEAREST,
+            .minFilter = VK_FILTER_NEAREST,
+            .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+            .anisotropyEnable = VK_TRUE,
+            .maxAnisotropy = 8.0f, // widely supported value for max anisotropy
+            .maxLod = 1.0f
+        };
+        vkResult = vkCreateSampler(vkDevice, &samplerCI, nullptr, &vkSampler);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship sampler", vkResult);
+
+        stbi_image_free(image);
+
+        textureDescriptors.push_back({
+            .sampler = vkSampler,
+            .imageView = vkImageView,
+            .imageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL
+        });
+
+        VkDescriptorBindingFlags descVariableFlag{ VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT };
+        VkDescriptorSetLayoutBindingFlagsCreateInfo descBindingFlags
+        {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+            .bindingCount = 1,
+            .pBindingFlags = &descVariableFlag
+        };
+        VkDescriptorSetLayoutBinding descLayoutBindingTex
+        {
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1u,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+        };
+        VkDescriptorSetLayoutCreateInfo descLayoutTexCI
+        {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .pNext = &descBindingFlags,
+            .bindingCount = 1,
+            .pBindings = &descLayoutBindingTex
+        };
+        vkResult = vkCreateDescriptorSetLayout(vkDevice, &descLayoutTexCI, nullptr, &vkDescriptorSetLayoutTex);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create descriptor set", vkResult);
+
+        VkDescriptorPoolSize poolSize
+        {
+            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1u,
+        };
+        VkDescriptorPoolCreateInfo descPoolCI
+        {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .maxSets = 1,
+            .poolSizeCount = 1,
+            .pPoolSizes = &poolSize
+        };
+        vkResult = vkCreateDescriptorPool(vkDevice, &descPoolCI, nullptr, &vkDescriptorPool);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to create descriptor pool", vkResult);
+
+        uint32_t variableDescCount{ 1u };
+        VkDescriptorSetVariableDescriptorCountAllocateInfo variableDescCountAI
+        {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT,
+            .descriptorSetCount = 1,
+            .pDescriptorCounts = &variableDescCount
+        };
+        VkDescriptorSetAllocateInfo texDescSetAlloc
+        {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .pNext = &variableDescCountAI,
+            .descriptorPool = vkDescriptorPool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &vkDescriptorSetLayoutTex
+        };
+        vkResult = vkAllocateDescriptorSets(vkDevice, &texDescSetAlloc, &vkDescriptorSetTex);
+        RETURN_FALSE_ON_FAIL_VULKAN("Failed to allocate descriptor sets", vkResult);
+
+        return true;
+    };
+    
+    bool player_loaded = load_texture(
+        "assets/player_spaceship.png",
+        m_playerSpaceship.sprite.image,
+        m_playerSpaceship.sprite.imageView,
+        m_playerSpaceship.sprite.sampler,
+        m_playerSpaceship.vmaBufferAllocation
+    );
+    bool enemy_loaded = load_texture(
+        "assets/enemy_spaceship.png",
+        m_enemySpaceship.sprite.image,
+        m_enemySpaceship.sprite.imageView,
+        m_enemySpaceship.sprite.sampler,
+        m_enemySpaceship.vmaBufferAllocation
+    );
+    if (!player_loaded || !enemy_loaded)
+    {
         return false;
     }
-    const int size_in_bytes = ss_width * ss_height * ss_channels;
-
-    VkImageCreateInfo texImgCI
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .format = VK_FORMAT_R8G8B8A8_SRGB,
-        .extent = {
-            .width = static_cast<uint32_t>(ss_width),
-            .height = static_cast<uint32_t>(ss_height),
-            .depth = 1
-        },
-        .mipLevels = 1,
-        .arrayLayers = 1,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .tiling = VK_IMAGE_TILING_OPTIMAL,
-        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-    };
-    VmaAllocationCreateInfo texImageAllocationCI{ .usage = VMA_MEMORY_USAGE_AUTO };
-    vkResult = vmaCreateImage(
-        m_vmaAllocator,
-        &texImgCI,
-        &texImageAllocationCI,
-        &m_playerSpaceship.sprite.image,
-        &m_playerSpaceship.sprite.imageAllocation,
-        nullptr
-    );
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship texture", vkResult);
-    VkImageViewCreateInfo texViewCI
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = m_playerSpaceship.sprite.image,
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = texImgCI.format,
-        .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .levelCount = 1,
-            .layerCount = 1
-        }
-    };
-    vkResult = vkCreateImageView(m_vkDevice, &texViewCI, nullptr, &m_playerSpaceship.sprite.imageView);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship texture image view", vkResult);
-    VkBuffer imgSrcBuffer{};
-    VmaAllocation imgSrcAllocation{};
-    VkBufferCreateInfo imgSrcBufferCI
-    {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = (uint32_t) size_in_bytes,
-        .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT
-    };
-    VmaAllocationCreateInfo imgSrcAllocationCI
-    {
-        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-                    | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-        .usage = VMA_MEMORY_USAGE_AUTO
-    };
-    VmaAllocationInfo imgSrcAllocationInfo{};
-    vkResult = vmaCreateBuffer(
-        m_vmaAllocator,
-        &imgSrcBufferCI,
-        &imgSrcAllocationCI,
-        &imgSrcBuffer,
-        &imgSrcAllocation,
-        &imgSrcAllocationInfo
-    );
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship texture buffer", vkResult);
-
-    memcpy(imgSrcAllocationInfo.pMappedData, spaceship_image, size_in_bytes);
-
-    VkFenceCreateInfo fenceOneTimeCI
-    {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
-    };
-    VkFence fenceOneTime{};
-    vkResult = vkCreateFence(m_vkDevice, &fenceOneTimeCI, nullptr, &fenceOneTime);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create OneTime fence", vkResult);
-    VkCommandBuffer cbOneTime{};
-    VkCommandBufferAllocateInfo cbOneTimeAI
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = m_vkCommandPool,
-        .commandBufferCount = 1
-    };
-    vkResult = vkAllocateCommandBuffers(m_vkDevice, &cbOneTimeAI, &cbOneTime);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create OneTime command buffer", vkResult);
-
-    VkCommandBufferBeginInfo cbOneTimeBI
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-    };
-    vkResult = vkBeginCommandBuffer(cbOneTime, &cbOneTimeBI);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to begin OneTime command buffer", vkResult);
-    VkImageMemoryBarrier2 barrierTexImage
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .srcStageMask = VK_PIPELINE_STAGE_2_NONE,
-        .srcAccessMask = VK_ACCESS_2_NONE,
-        .dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-        .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        .image = m_playerSpaceship.sprite.image,
-        .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .levelCount = 1,
-            .layerCount = 1
-        }
-    };
-    VkDependencyInfo barrierTexInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-        .imageMemoryBarrierCount = 1,
-        .pImageMemoryBarriers = &barrierTexImage
-    };
-    vkCmdPipelineBarrier2(cbOneTime, &barrierTexInfo);
-    std::vector<VkBufferImageCopy> copyRegions{};
-    copyRegions.push_back({
-        .bufferOffset = 0,
-        .imageSubresource{
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevel = 0u,
-            .layerCount = 1
-        },
-        .imageExtent{
-            .width = static_cast<uint32_t>(ss_width),
-            .height = static_cast<uint32_t>(ss_height),
-            .depth = 1
-        }
-    });
-    vkCmdCopyBufferToImage(
-        cbOneTime,
-        imgSrcBuffer,
-        m_playerSpaceship.sprite.image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        static_cast<uint32_t>(copyRegions.size()),
-        copyRegions.data()
-    );
-    
-    VkImageMemoryBarrier2 barrierTexRead
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
-        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        .newLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-        .image = m_playerSpaceship.sprite.image,
-        .subresourceRange = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .levelCount = 1,
-            .layerCount = 1
-        }
-    };
-    barrierTexInfo.pImageMemoryBarriers = &barrierTexRead;
-    vkCmdPipelineBarrier2(cbOneTime, &barrierTexInfo);
-    vkResult = vkEndCommandBuffer(cbOneTime);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to end OneTime command buffer", vkResult);
-    VkCommandBufferSubmitInfo cbOneTimeSubmitInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-        .commandBuffer = cbOneTime
-    };
-    VkSubmitInfo2 oneTimeSI
-    {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-        .commandBufferInfoCount = 1,
-        .pCommandBufferInfos = &cbOneTimeSubmitInfo
-    };
-    vkResult = vkQueueSubmit2(m_vkQueue, 1, &oneTimeSI, fenceOneTime);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to submit OneTime queue", vkResult);
-    vkResult = vkWaitForFences(m_vkDevice, 1, &fenceOneTime, VK_TRUE, UINT64_MAX);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to wait for OneTime fence", vkResult);
-
-    vkDestroyFence(m_vkDevice, fenceOneTime, nullptr);
-    vmaDestroyBuffer(m_vmaAllocator, imgSrcBuffer, imgSrcAllocation);
-
-    VkSamplerCreateInfo samplerCI
-    {
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_NEAREST,
-        .minFilter = VK_FILTER_NEAREST,
-        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-        .anisotropyEnable = VK_TRUE,
-        .maxAnisotropy = 8.0f, // widely supported value for max anisotropy
-        .maxLod = 1.0f
-    };
-    vkResult = vkCreateSampler(m_vkDevice, &samplerCI, nullptr, &m_playerSpaceship.sprite.sampler);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create spaceship sampler", vkResult);
-
-    stbi_image_free(spaceship_image);
-    textureDescriptors.push_back({
-        .sampler = m_playerSpaceship.sprite.sampler,
-        .imageView = m_playerSpaceship.sprite.imageView,
-        .imageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL
-    });
-
-    VkDescriptorBindingFlags descVariableFlag{ VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT };
-    VkDescriptorSetLayoutBindingFlagsCreateInfo descBindingFlags
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
-        .bindingCount = 1,
-        .pBindingFlags = &descVariableFlag
-    };
-    VkDescriptorSetLayoutBinding descLayoutBindingTex
-    {
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1u,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-    };
-    VkDescriptorSetLayoutCreateInfo descLayoutTexCI
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = &descBindingFlags,
-        .bindingCount = 1,
-        .pBindings = &descLayoutBindingTex
-    };
-    vkResult = vkCreateDescriptorSetLayout(m_vkDevice, &descLayoutTexCI, nullptr, &m_vkDescriptorSetLayoutTex);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create descriptor set", vkResult);
-
-    VkDescriptorPoolSize poolSize
-    {
-        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1u,
-    };
-    VkDescriptorPoolCreateInfo descPoolCI
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets = 1,
-        .poolSizeCount = 1,
-        .pPoolSizes = &poolSize
-    };
-    vkResult = vkCreateDescriptorPool(m_vkDevice, &descPoolCI, nullptr, &m_vkDescriptorPool);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create descriptor pool", vkResult);
-
-    uint32_t variableDescCount{ 1u };
-    VkDescriptorSetVariableDescriptorCountAllocateInfo variableDescCountAI
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT,
-        .descriptorSetCount = 1,
-        .pDescriptorCounts = &variableDescCount
-    };
-    VkDescriptorSetAllocateInfo texDescSetAlloc
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .pNext = &variableDescCountAI,
-        .descriptorPool = m_vkDescriptorPool,
-        .descriptorSetCount = 1,
-        .pSetLayouts = &m_vkDescriptorSetLayoutTex
-    };
-    vkResult = vkAllocateDescriptorSets(m_vkDevice, &texDescSetAlloc, &m_vkDescriptorSetTex);
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to allocate descriptor sets", vkResult);
 
     VkWriteDescriptorSet writeDescSet
     {
