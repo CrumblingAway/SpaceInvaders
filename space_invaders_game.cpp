@@ -972,51 +972,9 @@ bool SpaceInvadersGame::Run()
                 quit = true;
                 break;
             }
-
-            { /* Handle user input. */
-            //if (event.type == SDL_EVENT_KEY_DOWN)
-            //{
-                //switch (event.key.key)
-                //{
-                    //case SDLK_LEFT:
-                        //velocity += glm::vec3(-1.0f, 0.0f, 0.0f);
-                        //break;
-                    //case SDLK_RIGHT:
-                        //velocity += glm::vec3(1.0f, 0.0f, 0.0f);
-                        //break;
-                    //case SDLK_UP:
-                        //velocity += glm::vec3(0.0f, -1.0f, 0.0f);
-                        //break;
-                    //case SDLK_DOWN:
-                        //velocity += glm::vec3(0.0f, 1.0f, 0.0f);
-                        //break;
-                    //default:
-                        //break;
-                //}
-            //}
-            //if (event.type == SDL_EVENT_KEY_UP)
-            //{
-                //switch (event.key.key)
-                //{
-                    //case SDLK_LEFT:
-                        //velocity -= glm::vec3(-1.0f, 0.0f, 0.0f);
-                        //break;
-                    //case SDLK_RIGHT:
-                        //velocity -= glm::vec3(1.0f, 0.0f, 0.0f);
-                        //break;
-                    //case SDLK_UP:
-                        //velocity -= glm::vec3(0.0f, -1.0f, 0.0f);
-                        //break;
-                    //case SDLK_DOWN:
-                        //velocity -= glm::vec3(0.0f, 1.0f, 0.0f);
-                        //break;
-                    //default:
-                        //break;
-                //}
-            //}
-
-            }
         }
+
+        { /* Handle user input. */
         const bool* keystate = SDL_GetKeyboardState(NULL);
 
         if (keystate[SDL_SCANCODE_LEFT]) {
@@ -1025,8 +983,7 @@ bool SpaceInvadersGame::Run()
         if (keystate[SDL_SCANCODE_RIGHT]) {
             m_playerSpaceship.position += glm::vec3(1.0f, 0.0f, 0.0f) * m_playerSpaceship.speed;
         }
-
-        //m_playerSpaceship.position += m_playerSpaceship.speed * velocity;
+        }
 
         { /* Render. */
         { /* Wait on fence. */
