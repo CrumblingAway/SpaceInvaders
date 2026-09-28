@@ -56,7 +56,7 @@ struct PlayerSpaceship
     VkBuffer buffer{ VK_NULL_HANDLE };
     VmaAllocation vmaBufferAllocation{ VK_NULL_HANDLE };
 
-    float scale = 0.1f;
+    float scale = 0.01f;
     std::array<Vertex, 4> vertices
     {{
         {
