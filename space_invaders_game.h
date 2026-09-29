@@ -88,23 +88,23 @@ struct EnemySpaceship
     /* Rendering. */
     Sprite sprite;
 
-    float scale = 0.01f;
+    float scale = 0.03f;
     std::array<Vertex, 4> vertices
     {{
         {
-            .pos = scale * glm::vec3(-10.0f, -10.0f, 0.0f),
+            .pos = scale * glm::vec3(-10.0f, -20.0f, 0.0f),
             .uv = glm::vec2(0.0f, 0.0f)
         },
         {
-            .pos = scale * glm::vec3(-10.0f, 10.0f, 0.0f),
+            .pos = scale * glm::vec3(-10.0f, 0.0f, 0.0f),
             .uv = glm::vec2(0.0f, 1.0f)
         },
         {
-            .pos = scale * glm::vec3(10.0f, 10.0f, 0.0f),
+            .pos = scale * glm::vec3(10.0f, 0.0f, 0.0f),
             .uv = glm::vec2(1.0f, 1.0f)
         },
         {
-            .pos = scale * glm::vec3(10.0f, -10.0f, 0.0f),
+            .pos = scale * glm::vec3(10.0f, -20.0f, 0.0f),
             .uv = glm::vec2(1.0f, 0.0f)
         }
     }};
