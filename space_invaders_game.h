@@ -53,8 +53,6 @@ struct PlayerSpaceship
 {
     /* Rendering. */
     Sprite sprite;
-    VkBuffer buffer{ VK_NULL_HANDLE };
-    VmaAllocation vmaBufferAllocation{ VK_NULL_HANDLE };
 
     float scale = 0.01f;
     std::array<Vertex, 4> vertices
@@ -89,8 +87,6 @@ struct EnemySpaceship
 {
     /* Rendering. */
     Sprite sprite;
-    VkBuffer buffer{ VK_NULL_HANDLE };
-    VmaAllocation vmaBufferAllocation{ VK_NULL_HANDLE };
 
     float scale = 0.01f;
     std::array<Vertex, 4> vertices
@@ -197,6 +193,8 @@ private:
     VkPipelineLayout m_vkPipelineLayout{ VK_NULL_HANDLE };
     PlayerShaderData m_playerShaderData;
     std::array<PlayerShaderBuffer, m_maxFramesInFlight> m_shaderDataBuffers;
+    VkBuffer m_vkSpriteVertexBuffer{ VK_NULL_HANDLE };
+    VmaAllocation m_vmaSpriteBufferAllocation{ VK_NULL_HANDLE };
     uint32_t m_imageIndex{ 0 };
     uint32_t m_frameIndex{ 0 };
 

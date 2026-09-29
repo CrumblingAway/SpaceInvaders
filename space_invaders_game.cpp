@@ -353,7 +353,7 @@ bool SpaceInvadersGame::InitVulkan()
     VkBufferCreateInfo bufferCI
     {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = vkBufSize + iBufSize,
+        .size = (vkBufSize + iBufSize) * 2,
         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
     };
 
@@ -366,32 +366,20 @@ bool SpaceInvadersGame::InitVulkan()
     };
 
     // Player vertices buffer.
-    VmaAllocationInfo vPlayerBufferAllocationInfo{};
+    VmaAllocationInfo vSpriteBufferAllocationInfo{};
     vkResult = vmaCreateBuffer(
         m_vmaAllocator,
         &bufferCI,
         &vBufferAllocationCI,
-        &m_playerSpaceship.buffer,
-        &m_playerSpaceship.vmaBufferAllocation,
-        &vPlayerBufferAllocationInfo
+        &m_vkSpriteVertexBuffer,
+        &m_vmaSpriteBufferAllocation,
+        &vSpriteBufferAllocationInfo
     );
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
-    memcpy(vPlayerBufferAllocationInfo.pMappedData, m_playerSpaceship.vertices.data(), vkBufSize);
-    memcpy(((char*)vPlayerBufferAllocationInfo.pMappedData) + vkBufSize, m_playerSpaceship.vertexIndices.data(), iBufSize);
-
-    // Enemy vertices buffer.
-    VmaAllocationInfo vEnemyBufferAllocationInfo{};
-    vkResult = vmaCreateBuffer(
-        m_vmaAllocator,
-        &bufferCI,
-        &vBufferAllocationCI,
-        &m_enemySpaceship.buffer,
-        &m_enemySpaceship.vmaBufferAllocation,
-        &vEnemyBufferAllocationInfo
-    );
-    RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
-    memcpy(vEnemyBufferAllocationInfo.pMappedData, m_enemySpaceship.vertices.data(), vkBufSize);
-    memcpy(((char*)vEnemyBufferAllocationInfo.pMappedData) + vkBufSize, m_enemySpaceship.vertexIndices.data(), iBufSize);
+    memcpy(vSpriteBufferAllocationInfo.pMappedData, m_playerSpaceship.vertices.data(), vkBufSize);
+    memcpy((char*)vSpriteBufferAllocationInfo.pMappedData + vkBufSize, m_enemySpaceship.vertexIndices.data(), vkBufSize);
+    memcpy(((char*)vSpriteBufferAllocationInfo.pMappedData) + vkBufSize * 2, m_playerSpaceship.vertexIndices.data(), iBufSize);
+    memcpy(((char*)vSpriteBufferAllocationInfo.pMappedData) + vkBufSize * 2 + iBufSize, m_enemySpaceship.vertexIndices.data(), iBufSize);
     }
 
     { /* Parallelism. */
@@ -767,14 +755,14 @@ bool SpaceInvadersGame::InitVulkan()
         m_playerSpaceship.sprite.image,
         m_playerSpaceship.sprite.imageView,
         m_playerSpaceship.sprite.sampler,
-        m_playerSpaceship.vmaBufferAllocation
+        m_vmaSpriteBufferAllocation
     );
     bool enemy_loaded = load_texture(
         "assets/enemy_spaceship.png",
         m_enemySpaceship.sprite.image,
         m_enemySpaceship.sprite.imageView,
         m_enemySpaceship.sprite.sampler,
-        m_enemySpaceship.vmaBufferAllocation
+        m_vmaSpriteBufferAllocation
     );
     if (!player_loaded || !enemy_loaded)
     {
@@ -1184,8 +1172,8 @@ bool SpaceInvadersGame::Run()
             0,
             nullptr
         );
-        vkCmdBindVertexBuffers(cb, 0, 1, &m_playerSpaceship.buffer, &vOffset);
-        vkCmdBindIndexBuffer(cb, m_playerSpaceship.buffer, sizeof(Vertex) * Sprite::NUM_VERTICES, VK_INDEX_TYPE_UINT16);
+        vkCmdBindVertexBuffers(cb, 0, 1, &m_vkSpriteVertexBuffer, &vOffset);
+        vkCmdBindIndexBuffer(cb, m_vkSpriteVertexBuffer, sizeof(Vertex) * Sprite::NUM_VERTICES * 2, VK_INDEX_TYPE_UINT16);
 
         vkCmdPushConstants(
             cb,
@@ -1196,7 +1184,7 @@ bool SpaceInvadersGame::Run()
             &m_shaderDataBuffers[m_frameIndex].deviceAddress
         );
 
-        vkCmdDrawIndexed(cb, 6, 3, 0, 0, 0);
+        vkCmdDrawIndexed(cb, 12, 1, 0, 0, 0);
         vkCmdEndRendering(cb);
 
         VkImageMemoryBarrier2 barrierPresent
@@ -1333,13 +1321,13 @@ bool SpaceInvadersGame::CleanupVulkan()
 
 bool SpaceInvadersGame::CleanupObjects()
 {
+    vmaDestroyBuffer(m_vmaAllocator, m_vkSpriteVertexBuffer, m_vmaSpriteBufferAllocation);
+
     /* Cleanup player. */
-    vmaDestroyBuffer(m_vmaAllocator, m_playerSpaceship.buffer, m_playerSpaceship.vmaBufferAllocation);
     vkDestroyImageView(m_vkDevice, m_playerSpaceship.sprite.imageView, nullptr);
     vmaDestroyImage(m_vmaAllocator, m_playerSpaceship.sprite.image, m_playerSpaceship.sprite.imageAllocation);
     vkDestroySampler(m_vkDevice, m_playerSpaceship.sprite.sampler, nullptr);
     
-    vmaDestroyBuffer(m_vmaAllocator, m_enemySpaceship.buffer, m_enemySpaceship.vmaBufferAllocation);
     vkDestroyImageView(m_vkDevice, m_enemySpaceship.sprite.imageView, nullptr);
     vmaDestroyImage(m_vmaAllocator, m_enemySpaceship.sprite.image, m_enemySpaceship.sprite.imageAllocation);
     vkDestroySampler(m_vkDevice, m_enemySpaceship.sprite.sampler, nullptr);
