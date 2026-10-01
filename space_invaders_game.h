@@ -88,27 +88,28 @@ struct EnemySpaceship
     /* Rendering. */
     Sprite sprite;
 
-    float scale = 0.03f;
+    float scale = 0.01f;
+    glm::vec3 offset = glm::vec3(0.0f, -20.0f, 0.0f);
     std::array<Vertex, 4> vertices
     {{
         {
-            .pos = scale * glm::vec3(-10.0f, -20.0f, 0.0f),
+            .pos = scale * (glm::vec3(-10.0f, -10.0f, 0.0f) + offset),
             .uv = glm::vec2(0.0f, 0.0f)
         },
         {
-            .pos = scale * glm::vec3(-10.0f, 0.0f, 0.0f),
+            .pos = scale * (glm::vec3(-10.0f, 10.0f, 0.0f) + offset),
             .uv = glm::vec2(0.0f, 1.0f)
         },
         {
-            .pos = scale * glm::vec3(10.0f, 0.0f, 0.0f),
+            .pos = scale * (glm::vec3(10.0f, 10.0f, 0.0f) + offset),
             .uv = glm::vec2(1.0f, 1.0f)
         },
         {
-            .pos = scale * glm::vec3(10.0f, -20.0f, 0.0f),
+            .pos = scale * (glm::vec3(10.0f, -10.0f, 0.0f) + offset),
             .uv = glm::vec2(1.0f, 0.0f)
         }
     }};
-    std::array<uint16_t, 6> vertexIndices{ 0, 1, 2, 0, 2, 3 };
+    std::array<uint16_t, 6> vertexIndices{ 4, 5, 6, 4, 6, 7 };
     
     /* Logic. */
     glm::vec3 position;

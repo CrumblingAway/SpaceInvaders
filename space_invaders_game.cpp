@@ -377,7 +377,7 @@ bool SpaceInvadersGame::InitVulkan()
     );
     RETURN_FALSE_ON_FAIL_VULKAN("Failed to create VMA buffer", vkResult);
     memcpy(vSpriteBufferAllocationInfo.pMappedData, m_playerSpaceship.vertices.data(), vkBufSize);
-    memcpy((char*)vSpriteBufferAllocationInfo.pMappedData + vkBufSize, m_enemySpaceship.vertexIndices.data(), vkBufSize);
+    memcpy((char*)vSpriteBufferAllocationInfo.pMappedData + vkBufSize, m_enemySpaceship.vertices.data(), vkBufSize);
     memcpy(((char*)vSpriteBufferAllocationInfo.pMappedData) + vkBufSize * 2, m_playerSpaceship.vertexIndices.data(), iBufSize);
     memcpy(((char*)vSpriteBufferAllocationInfo.pMappedData) + vkBufSize * 2 + iBufSize, m_enemySpaceship.vertexIndices.data(), iBufSize);
     }
